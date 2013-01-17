@@ -1,0 +1,1345 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=7,IE=9" />
+	<!--The viewport meta tag is used to improve the presentation and behavior
+	of the samples on iOS devices-->
+	<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta charset="utf-8">
+	<title>Olympia Arts Walk</title>
+	<link rel="stylesheet" href="themes/Olympia.min.css" />
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css" />
+	<link rel="stylesheet" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.2/js/esri/css/esri.css" />
+	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+	<script type="text/javascript">
+		var djConfig = {parseOnLoad: true};
+		$.mobile.pushStateEnabled = false;
+		$.mobile.ajaxEnabled = true
+	</script>
+	<script type="text/javascript" src="js/config.js"></script>
+	<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.2compact"></script>
+	<script type="text/javascript" src="js/images64.js"></script>
+	<script type="text/javascript" src="js/date.js"></script>
+
+
+<style type="text/css">
+	body {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    
+    .center-wrapper {
+        text-align: center;
+        width: 210px;
+        margin:0 auto;
+    }
+    @-webkit-keyframes pulse {
+      0% {
+      }
+      45% {
+        opacity: .60;
+      }
+      100% {
+        opacity: 1.0;
+      }
+    }
+
+    #map_graphics_layer {
+      -webkit-animation-duration: 3s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-name: pulse;
+      -webkit-animation-timing-function: ease-in-out;
+    }
+
+   .page-map, #mapcontent, #map, #map_root {
+            height: 100%;
+			width: 100%;
+            padding: 0;
+            margin:0;
+        }
+
+	.map{
+	  overflow:visible !important;
+	}
+
+
+    .ui-bar-f {
+      border: 1px solid #005502;
+      background: #9d3f25;
+      color: #fff;
+      text-shadow: 0 1px 0 #fff;
+      background-image: -moz-linear-gradient(top, #92542c, #9d3f25);
+      background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #92542c), color-stop(1, #9d3f25));
+      -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorStr='#92542c', EndColorStr='#9d3f25')";
+	  
+      .right {
+        float: right;
+        display: inline;
+      }
+	  
+      .left {
+        float: left;
+        display: inline;
+      }
+    }
+	
+	h4 {text-align: center;} <!--this was added to the stylesheet because the jQuery mobile stylesheet was clipping the page title in the header.-->
+    
+
+</style>
+<script type="text/javascript">
+	dojo.require("esri.map");
+	dojo.require("esri.dijit.Legend");
+	dojo.require("esri.arcgis.utils");
+	dojo.require("esri.tasks.query");
+    
+	var queryTaskEvents, queryEvents, query2, map, artsWalk, selectionLayer, template, parameters, queryTaskArtists, queryTaskVenues, queryVenues, queryName, queryArtists;
+    var flag = 0;
+	var pass = "";
+    var shownOnce = false;
+	
+	function init() {
+		var supportsOrientationChange = "onorientationchange" in window,
+          orientationEvent = supportsOrientationChange ? "orientationchange" : "resize";
+
+        window.addEventListener(orientationEvent, function () {
+          orientationChanged();
+        }, false);
+	
+		dojo.byId("appTitle").innerHTML = userConfig.ApplicationName;
+		dojo.byId("mapPageTitle").innerHTML = userConfig.ApplicationName;
+		dojo.byId("aboutTitle").innerHTML = userConfig.ApplicationName;
+	
+	
+        $.mobile.showPageLoadingMsg();
+        initMap(0);
+		//query businesses
+        queryTaskVenues = new esri.tasks.QueryTask(userConfig.LocationsLayer);
+        //build query filter
+        queryVenues = new esri.tasks.Query();
+        queryVenues.returnGeometry = false;
+        queryVenues.outFields = ["Business, ID"];
+		queryVenues.orderByFields = ["Business"];
+		queryVenues.where = "1=1"; //1 always equals 1, so all of the records will be displayed
+		
+		
+		//query artists
+		queryTaskArtists = new esri.tasks.QueryTask(userConfig.PeopleLayer);
+		//build query filter, artist table
+        queryArtists = new esri.tasks.Query();
+        queryArtists.returnGeometry = false;
+        queryArtists.outFields = ["Artist, ID"];
+		queryArtists.orderByFields = ["Artist"];
+		queryArtists.where = "1=1"; //query all of the records
+		//query only artist name
+		queryName = new esri.tasks.Query();
+        queryName.returnGeometry = false;
+        queryName.outFields = ["Artist"];
+		queryName.orderByFields = ["Artist"];
+		queryName.where = "1=1";	
+		
+        console.log("121");
+		//query events
+		queryTaskEvents = new esri.tasks.QueryTask(userConfig.ActivityLayer);
+		//build query filter
+        queryEvents = new esri.tasks.Query();
+        queryEvents.returnGeometry = false;
+        queryEvents.outFields = ["Time, Day, Event, ID"];
+		queryEvents.orderByFields = ["Sort"];
+		queryEvents.where = "1=1";	
+		
+        executeQueries();        
+	}
+	
+    function executeQueries() {
+        var dVenues, dArtists, dNow, dFriday, dSaturday, dList, dEvents;
+        //dVenues = queryTaskVenues.execute(queryVenues,listVenues);
+        //dArtists = queryTaskArtists.execute(queryArtists,listArtists);
+        //dNow = queryTaskEvents.execute(queryEvents,eventsHandler);
+		dVenues = queryTaskVenues.execute(queryVenues);
+        dArtists = queryTaskArtists.execute(queryArtists);
+        dNow = queryTaskEvents.execute(queryEvents);
+		//dFriday = queryTaskEvents.execute(queryEvents,showResultsFriday);
+		//dSaturday = queryTaskEvents.execute(queryEvents,showResultsSaturday);
+        //dEvents = queryTaskEvents.execute(queryEvents,listEvents);
+		dList = new dojo.DeferredList([dVenues, dArtists, dNow]);
+        dList.then(function(results){
+			listVenues(results[0][1]);
+			listArtists(results[1][1]);
+			eventsHandler(results[2][1]);
+            $('#schedulebtn').removeClass("ui-disabled").addClass("ui-enabled");
+            $('#artistbtn').removeClass("ui-disabled").addClass("ui-enabled");
+            $('#venuebtn').removeClass("ui-disabled").addClass("ui-enabled");
+            $('#nowbtn').removeClass("ui-disabled").addClass("ui-enabled");
+            $.mobile.hidePageLoadingMsg();
+			}
+        );
+        
+    }
+    
+	function getTheDay() {
+		var montharray=new Array("January","February","March","April","May","June","July","August","September","October","November","December")
+		var dayarray = new Array ("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+		var mydate = new Date();
+		var year = mydate.getYear();
+		if (year < 1000) {
+			year += 1900;
+		}
+		var day = mydate.getDay();
+		var month = mydate.getMonth();
+		var daym = mydate.getDate();
+		if (daym < 10) {
+			daym = "0" + daym;
+		}
+		var hours = mydate.getHours();
+		var minutes = mydate.getMinutes();
+		var seconds = mydate.getSeconds();
+		var dn = "";
+		if (hours >= 12) {
+			dn = "";
+		}
+		if (hours > 12) {
+			hours = hours - 12;
+		}
+		if (hours == 0) {
+			hours = 12;
+		}
+		if (minutes <= 9) {
+			minutes = "0" + minutes;
+		}
+		if (seconds <= 9) {
+			seconds = "0" + seconds;
+		}
+		//Hire change font size
+		var cdate= "< small> < font color='ffffff' face='Arial'>"
+		  +dayarray[day]
+		  +", "+daym+" "+montharray[month]+", "+year
+		  +" "+hours+":"+minutes+":"+seconds+" "+dn
+		  +"  < /small>";
+
+		return day;
+	}
+	
+	function getTheTime() {
+		var montharray=new Array("January","February","March","April","May","June","July","August","September","October","November","December")
+		var dayarray = new Array ("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+		var mydate = new Date();
+		var year = mydate.getYear();
+		if (year < 1000) {
+			year += 1900
+		}
+		var day = mydate.getDay();
+		var month = mydate.getMonth();
+		var daym = mydate.getDate();
+		if (daym < 10) {
+			daym = "0" + daym;
+		}
+		var hours = mydate.getHours();
+		var minutes = mydate.getMinutes();
+		var seconds = mydate.getSeconds();
+		var dn = "";
+		if (hours >= 12) {
+			dn = "";
+		}
+		if (hours > 12) {
+			hours = hours - 12;
+		}
+		if (hours == 0) {
+			hours = 12;
+		}
+		if (minutes <= 9) {
+			minutes = "0" + minutes;
+		}
+		if (seconds <= 9) {
+			seconds = "0" + seconds;
+		}
+		//Hire change font size
+		var cdate= "< small> < font color='ffffff' face='Arial'>"
+		  +dayarray[day]
+		  +", "+daym+" "+montharray[month]+", "+year
+		  +" "+hours+":"+minutes+":"+seconds+" "+dn
+		  +"  < /small>";
+
+		return hours;
+	}
+	
+	function eventsHandler(results) {
+		rightNow(results);
+		showResultsFriday(results);
+		showResultsSaturday(results);
+		listEvents(results);
+	}
+	
+	function rightNow(events) {
+		var time = getTheTime();
+		//use these to test the program and set the day and time.
+		//var time = 12;
+		var day = getTheDay();
+		//var day = 6;
+		var u = 0;
+		var l = 0;
+		var c = 0;
+		var s = 0;
+		var f, eventtime, check;
+		check = 0;
+		var dayarray = new Array ("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+		var sooner = time - 1;
+		var later = time + 1;
+		var theFinalStartEnd = [];
+		var dayString = "";
+		if (dayarray[day] == "Friday") {
+			dayString = "10/5/2012";
+		}
+		if (dayarray[day] == "Saturday") {
+			dayString = "10/6/2012";
+		}
+		for (var i=0, il=events.features.length; i<il; i++) {
+			
+			var next = "";
+			var featureAttributes = events.features[i].attributes;
+			var theStartEndNums = dojo.string.trim(events.features[i].attributes["Time"]).replace("am"," AM").replace("pm"," PM").split("-");
+			if (theStartEndNums.length == 1) {
+				theStartEndNums[1] = theStartEndNums[0];
+			}
+			var theStartEnd = dojo.string.trim(events.features[i].attributes["Time"]).replace("am","").replace("pm","").split("-");
+			var theStartEnd2 = theStartEnd[0].split(":");
+			var theStartEnd3;
+			if (theStartEnd.length > 1) {
+				theStartEnd3 = theStartEnd[1].split(":");
+			} else {
+				theStartEnd3 = theStartEnd[0].split(":");
+			}
+			//theFinalStartEnd.push([theStartEnd2, theStartEnd3])
+			if (parseInt(theStartEnd2[0]) < parseInt(theStartEnd3[0])) {
+				theStartEndNums[0] = theStartEndNums[0] + " " + theStartEndNums[1].split(" ")[1];
+			} else if (parseInt(theStartEnd2[0]) > parseInt(theStartEnd3[0])) {
+				theStartEndNums[0] = theStartEndNums[0] + " AM";
+			} else if (theStartEndNums[0].indexOf("PM") == -1 && theStartEndNums[0].indexOf("AM") == -1) {
+				theStartEndNums[0] = theStartEndNums[0] + " AM";
+			}
+			
+			if (dayarray[day] == events.features[i].attributes["Day"] && dojo.string.trim(events.features[i].attributes["Time"]) != "Various Times") {
+				var startDayTime = Date.parse(dayString + " " + theStartEndNums[0].replace("12 PM","12:00").replace("12:10 PM", "12:10"));
+				var endDayTime = Date.parse(dayString + " " + theStartEndNums[1].replace("12 PM","12:00").replace("12:10 PM", "12:10"));
+				//console.log(startDayTime + " AND " + endDayTime);
+				if ((Date.parse("now") >= startDayTime.setHours(startDayTime.getHours() - 1)) && (Date.parse("now") <= endDayTime.setHours(endDayTime.getHours() + 1))) {
+					f = "<li><a href='#venue' data-params='ID=" + events.features[i].attributes["ID"] + "' data-transition='slide' class='venue'>" + featureAttributes["Time"] + " ";
+					pass = pass + events.features[i].attributes["ID"] + ",";
+					f = f + featureAttributes["Event"] + "</a></li>";
+					$('#now').append(f);
+					check = 1;
+				}
+			}
+		  if ((events.features[i].attributes["Time"] == "Ongoing" || dojo.string.trim(events.features[i].attributes["Time"]) == "Various Times") && dayarray[day] == events.features[i].attributes["Day"]) {
+			var count = 0;
+			for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") {
+					if (u < 1) {
+						f = "<li><a href='#venue' data-params='ID=" + events.features[i].attributes["ID"] + "' data-transition='slide' class='venue'>" + featureAttributes[att] + " ";
+						pass = pass + events.features[i].attributes["ID"] + ",";
+						u++;
+					}
+					else {
+						f = f + featureAttributes[att] + "</a></li>";
+						u = 0;
+					}
+				}
+			  }
+			  $('#now').append(f);
+              check = 1;
+		  }
+		  else {
+			f = "";
+		  }
+		//$('#now').listview();
+		//$('#now').listview('refresh');
+		}
+		//console.log(theFinalStartEnd);
+		if (check != 1) {
+			$('#empty').append("</br><div align='center'>No events at this time</div><a href='#friday' data-role='button' data-theme='b'>Schedule</a>").trigger('create');
+		}
+		pass = "ID=" + pass.slice(0,pass.length-1);
+		if ($('#rightnow').is(':visible')) {
+			$("#now").listview("refresh");
+		}
+		//$('#onmap').append('<a href="#mapPage" data-params="ID=' + pass + '" data-role="button" data-theme="b" data-inline="true" class="map">Map</a>').trigger('create');
+	}
+	
+	function toMap(pass) {
+		 $.mobile.changePage('#mapPage', {
+         });
+         console.log(pass);
+         if (!isNaN(map.extent.xmin) && shownOnce == false) {
+                shownOnce = true;
+                resizeMap();
+        }
+         zoomToLocation(pass);
+	}
+	
+	function showResultsFriday(results1) {
+		var u = 0;
+		var l = 0;
+		for (var i=0, il=results1.features.length; i<il; i++) { //iterate through all of the records
+		  var featureAttributes = results1.features[i].attributes;
+		  if (isNaN(results1.features[i].attributes["Time"].charAt(0)) && results1.features[i].attributes["Day"] == "Friday") { //this is a provision for poor data management. if the data didn't have times such as "TBA" this wouldn't be needed
+			for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") { //this ensures that only the time and event name are displayed
+					if (u < 1) {
+						f =  "<li><a href='#venue' data-params='ID=" + results1.features[i].attributes["ID"] + "' data-transition='slide' class='venue'>" + featureAttributes[att] + " "; //displays the time of the event
+						u++;
+					}
+					else {
+					f = f + featureAttributes[att] + "</a></li>"; //displays the event name
+					u = 0;
+					$('#fridayEvents').append(f);
+					}
+				}
+			}
+		  }
+		  else if (results1.features[i].attributes["Day"] == "Friday") { //display the Friday events only
+			if (i == 0) {
+				$('#fridayEvents').append("<li data-role='list-divider'>" + results1.features[i].attributes["Time"].charAt(0) + ":00"); //setting the data-role to 'list-divider' inserts a divider in the list
+			}
+			if (i > 0) {
+				l = i - 1; //this code is used to check against the previous entry as seen in the next 'if' statement below
+			}
+			if (results1.features[i].attributes["Time"].charAt(0) > results1.features[l].attributes["Time"].charAt(0)) { //check to see if the time for the current event is greater then the time of the last event,
+				$('#fridayEvents').append("<li data-role='list-divider'>" + results1.features[i].attributes["Time"].charAt(0) + ":00"); //if it is, insert a new divider. Note: this code assumes that no two digit times are used as is the case in the current data set (eg. 10,11 and 12 o'clock). If there was events at this time, it would be nesecarry to implement the code used on the page for the Saturday event schedule.
+			}
+			var f = "";
+			for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") {
+					if (u < 1) {
+						f =  "<li><a href='#venue' data-params='ID=" + results1.features[i].attributes["ID"] + "' data-transition='slide' class='venue'>" + featureAttributes[att] + " ";
+						u++;
+					}
+					else {
+					f = f + featureAttributes[att] + "</a></li>";
+					u = 0;
+					}
+				}
+		  }
+		  $('#fridayEvents').append(f);
+		  } 
+		  else if (results1.features[i].attributes["Time"] == "Ongoing" || results1.features[i].attributes["Time"] == "Various times") { //This statement was created to address flaws in the data. If a more consistant data structure is used in the future, this code should be modified.
+			var count = 0;
+			for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") {
+					if (u < 1) {
+						f = "<li><a href='#venue' data-params='ID=" + results1.features[i].attributes["ID"] + "' data-transition='slide' class='venue'>" + featureAttributes[att] + " "; //the event time is appended here
+						u++;
+					}
+					else {
+						f = f + featureAttributes[att] + "</a></li>"; //the event name is added here
+						u = 0;
+					}
+				}
+			  }
+			  $('#fridayEvents').append(f);
+		  }
+		  else {
+			f = "";
+		  }
+	    }
+		if ($('#friday').is(':visible')) {
+			$("#fridayEvents").listview("refresh");
+		}
+      }
+	  
+	  function getName() {
+		var business = esri.urlToObject(dojo.doc.location.href);
+		var b = business.query.event;
+		return b;
+	  }
+	  
+	  function showResultsSaturday(results2) {
+		var u = 0;
+		var l = 0;
+		var c = 0;
+		for (var i=0, il=results2.features.length; i<il; i++) { //iterate through all of the records
+		  var featureAttributes = results2.features[i].attributes;
+		  if (results2.features[i].attributes["Day"] == "Saturday") { //only get the events that occur on Saturday
+			l = i - 1; //this is used to reference the previously occuring listing
+			if (results2.features[i].attributes["Time"].charAt(0) < 9) { //this filters out NaN values
+				var one = results2.features[i].attributes["Time"].charAt(0); //the first digit of the time (present record)
+				var two = results2.features[i].attributes["Time"].charAt(1); //the second digit of the time (present record)
+				var e = 0;
+				if (one == 1) { //this checks to see if the number has two digits (only times starting with 1 can have two digits)
+					if (isNaN(parseInt(two, 10))) { //checks to see if the second digit is a valid number, veryifying that the number has two digits. If true (is NaN), the time must be 1:00
+						var last = results2.features[l].attributes["Time"].charAt(0); //this gets the first digit of the time of the previous record
+						if (isNaN(parseInt(results2.features[l].attributes["Time"].charAt(1)))) { //this gets second digit of the of the previous record and checks to see if it is a valid number. If true, it is NaN and there is no second digit.
+						}
+						else {
+							last = last + results2.features[l].attributes["Time"].charAt(1); //the second digit must be valid in order to hit this statement, so both values are added together
+						}
+						if(one > last) { //now the resulting number is to compare against the time of the current record
+							$('#saturdayEvents').append("<li data-role='list-divider'>" + results2.features[i].attributes["Time"].charAt(0) + ":00");
+						}
+						else if (last > one) {
+							$('#saturdayEvents').append("<li data-role='list-divider'>1:00</li>"); //if the previous result happens to be greater then the present value, the present value must be 1:00
+						}
+					}
+					else { //if this point is hit, the present value must have two digits (because the second value is a valid number)
+						var r = 0;
+						var both = one + parseInt(two, 10);
+						//compare 'both' against the previous value
+						var last = results2.features[l].attributes["Time"].charAt(0); //grabs the first digit of the previous record
+						if (isNaN(parseInt(results2.features[l].attributes["Time"].charAt(1)))) { //checks to see if there is a second digit of the previous record. If it isn't a number, nothing special happens
+						}
+						else {
+							last = last + results2.features[l].attributes["Time"].charAt(1); //if the second digit is a valid number, it is appended to the first number
+						}
+						if (isNaN(parseInt(last, 10))) { //checks to see if the time of the previous record is a valid number
+							$('#saturdayEvents').append("<li data-role='list-divider'>" + both + ":00");
+							r++;
+						}
+						if (r == 0) {
+							if (c == 0) {
+								$('#saturdayEvents').append("<li data-role='list-divider'>" + both + ":00");
+							}
+							else {
+								if (results2.features[l].attributes["Time"].charAt(0) == 1 && results2.features[l].attributes["Time"].charAt(1) <= 2) {
+									last = results2.features[l].attributes["Time"].charAt(0) + results2.features[l].attributes["Time"].charAt(1);
+								}
+								if (both > last) {
+									$('#saturdayEvents').append("<li data-role='list-divider'>" + both + ":00");
+								}
+								else if (last > both) {
+									$('#saturdayEvents').append("<li data-role='list-divider'>1:00");
+								}
+							}
+						}
+					}	
+					e++;
+				}
+				if (e == 0) {
+					if (results2.features[i].attributes["Time"].charAt(0) > results2.features[l].attributes["Time"].charAt(0)) {
+						$('#saturdayEvents').append("<li data-role='list-divider'>" + results2.features[i].attributes["Time"].charAt(0) + ":00");
+					}
+				}
+			}
+			var s = "";
+			  for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") {
+					if (u < 1) {
+						s = s + "<li><a href='#venue' data-params='ID=" + results2.features[i].attributes["ID"] + "' data-transition='slide' class='venue'>" + featureAttributes[att] + " ";
+						u++;
+					}
+					else {
+						s = s + featureAttributes[att] + "</a></li>";
+						u = 0;
+					}
+				}
+			  }
+			  $('#saturdayEvents').append(s);
+			  c++;
+		  }
+		  else if (results2.features[i].attributes["Time"] == "Ongoing" || results2.features[i].attributes["Time"] == "Various times") {
+			for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") {
+					if (u < 1) {
+						$('#saturdayEvents').append(s + "<li>" + featureAttributes[att] + " ");
+						u++;
+					}
+					else {
+						$('#saturdayEvents').append(featureAttributes[att] + "</li>");
+						u = 0;
+					}
+				}
+			  }
+		  }
+		  else {
+			s = "";
+		  }
+		}
+		if ($('#saturday').is(':visible')) {
+			$("#saturdayEvents").listview("refresh");
+		}
+      }
+	  
+	  function initMap(ID) {
+        console.log('Map, launched!');
+        //grab only the layers that can be rendered
+        var lods = [{
+          "level": 14,
+          "resolution": 9.55462853563415,
+          "scale": 36111.909643
+        }, {
+          "level": 15,
+          "resolution": 4.77731426794937,
+          "scale": 18055.954822
+        }, {
+          "level": 16,
+          "resolution": 2.388657133974685,
+          "scale": 9027.977411
+        }, {
+          "level": 17,
+          "resolution": 1.1943285668550503,
+          "scale": 4513.988705
+        }, {
+          "level": 18,
+          "resolution": 0.5971642835598172,
+          "scale": 2256.994353
+        }, {
+          "level": 19,
+          "resolution": 0.29858214164761665,
+          "scale": 1128.497176
+        }];
+
+		var zoomExtent = userConfig.DefaultExtent.split(",");
+        var startExtent = new esri.geometry.Extent(parseFloat(zoomExtent[0]), parseFloat(zoomExtent[1]), parseFloat(zoomExtent[2]), parseFloat(zoomExtent[3]), new esri.SpatialReference({ wkid: userConfig.SpatialReference }));
+
+        map = new esri.Map("map", {
+          lods: lods,
+		  extent: startExtent
+        });
+
+        console.log("-1");
+        dojo.connect(map, "onLoad", function () {
+            console.log('102');
+			var r = createRenderer('yellow');
+			artsWalk.setRenderer(r);
+
+			map.addLayer(artsWalk);
+
+			//add a graphics  layer to display selected features 
+			selectionLayer = new esri.layers.GraphicsLayer();
+            dojo.connect(selectionLayer,'onClick',function(evt){
+                viewVenues(evt.graphic);
+            });
+			var selR = createRenderer('blue');
+			selectionLayer.setRenderer(selR);
+			map.addLayer(selectionLayer);
+			//map.addLayers([artsWalk, selectionLayer]);
+            console.log("1");
+			//zoomToLocation(ID);
+            $('#mapbtn').removeClass("ui-disabled").addClass("ui-enabled");
+        });
+        //add the world imagery from arcgis online
+        console.log("0");
+        var basemap1 = new esri.layers.ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
+        map.addLayer(basemap1);
+        var basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://nwdemo1.esri.com/arcgis/rest/services/Olympia/Olympia_CM/MapServer");
+        map.addLayer(basemap);
+        //could add more to this template to display more info from feature 
+        var templateJson = {
+          title: "{Business}",
+          description:"{Artist}"
+
+        }
+        template = new esri.dijit.PopupTemplate(templateJson); //only used if a pop-up is desired
+
+        artsWalk = new esri.layers.FeatureLayer("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/0", {
+          "id":'artsWalkLayer',
+          mode: esri.layers.FeatureLayer.MODE_SNAPSHOT,
+          outFields: ["ID","Business","Address","Artist","BUSINESSES___See_Events_Fall_12","BUSINESSES___FRI_Perform_Fall_12","BUSINESSES___SAT_Perform_Fall_12"]
+        });
+		console.log("34");
+
+        //listen for the arts walk layer's click event
+        dojo.connect(artsWalk,'onClick',function(evt){
+          viewVenues(evt.graphic);
+        });
+        //listen for the graphics layer click event 
+
+        console.log('35');
+        map.infoWindow.resize(200, 250);
+
+      }
+	  
+	  function createRenderer(symbolColor){ //this function uses a renderer from the ArcGIS API to draw the symbols given certain parameters
+	  if (symbolColor == 'blue') {
+		  var uvrJson = {"type": "uniqueValue",
+			  "field1": "ID",
+			  "defaultSymbol": {
+			  
+				"url":symbolColor + '/' + symbolColor + '/' + symbolColor + '100.png', // "yellow/yellow/yellow100.png",
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+			  
+			  },
+			  "uniqueValueInfos": [{
+			  "value": "1",
+			  "symbol": {
+				"url":symbolColor+ '/' + symbolColor + '/' + symbolColor + '1.png', //"yellow/yellow/yellow1.png",
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+				}
+				}]
+			}
+		} else {
+			var uvrJson = {"type": "uniqueValue",
+			  "field1": "ID",
+			  "defaultSymbol": {
+			  
+				"url":symbolColor + '/' + symbolColor + '/' + symbolColor + '100.png', // "yellow/yellow/yellow100.png",
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+			  
+			  },
+			  "uniqueValueInfos": [{
+			  "value": "1",
+			  "symbol": {
+				"url":b64Array[0],
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+				}
+				}]
+			}
+		}
+        var renderer = new esri.renderer.UniqueValueRenderer(uvrJson);
+		if (symbolColor != 'blue') {
+			for (var i = 2; i < 100; i++) {
+			  renderer.addValue({
+				value: i,
+				symbol: {
+				  "url": b64Array[i-1], //the base 64 images are added here
+				  "height": 20,
+				  "width": 20,
+				  "type": "esriPMS"
+				}
+			  });
+			}
+		}
+		else {
+			for (var i = 2; i < 126; i++) {
+			  renderer.addValue({
+				value: i,
+				symbol: {
+				  "url": symbolColor + '/' + symbolColor + '/' + symbolColor + i + '.png', //"yellow/yellow/yellow" + i + ".png",
+				  "height": 20,
+				  "width": 20,
+				  "type": "esriPMS"
+				}
+			  });
+			}
+		}
+        return renderer;
+
+      }
+	  
+	  function pointToExtent(map, point, toleranceInPixel) {
+        var pixelWidth = map.extent.getWidth() / map.width;
+        var toleraceInMapCoords = toleranceInPixel * pixelWidth;
+        return new esri.geometry.Extent(point.x - toleraceInMapCoords,
+        point.y - toleraceInMapCoords,
+        point.x + toleraceInMapCoords,
+        point.y + toleraceInMapCoords,
+        map.spatialReference);
+      }
+	  
+	  function viewVenues(graphic){
+          //$.mobile.changePage('condensed.html#venue', {
+		  $.mobile.changePage('#venue', {
+            //graphic.attributes.ID
+            
+          });
+        var queryEventsVenue = new esri.tasks.Query();
+        queryEventsVenue.returnGeometry = false;
+        queryEventsVenue.outFields = ["Time, Day, Event"];
+        queryEventsVenue.orderByFields = ["Sort"];
+        queryEventsVenue.where = "ID= " + graphic.attributes.ID;
+        queryTaskEvents.execute(queryEventsVenue,showEvents);
+        
+        queryArtists.where = "ID= " + graphic.attributes.ID;
+        queryTaskArtists.execute(queryArtists,showArtist);
+        
+        var queryVenueName = new esri.tasks.Query();
+        queryVenueName.returnGeometry = false;
+        queryVenueName.outFields = ["Business", "ID"];
+        queryVenueName.where = "ID= " + graphic.attributes.ID;
+        queryTaskVenues.execute(queryVenueName,showWebsite);
+      }
+	  
+	  function locationError(error) {
+        switch (error.code) {
+        case error.PERMISSION_DENIED:
+        console.log("Location not provided");
+		var zoomExtent = responseObject.DefaultExtent.split(",");
+
+        var extent = new esri.geometry.Extent(-13682050, 5948629, -13679940, 5950043, new esri.SpatialReference({ wkid: 102100 }));
+        map.setExtent(extent);
+        $.mobile.hidePageLoadingMsg();
+        console.log(extent);
+        console.log(map.extent);
+		  break;
+        case error.POSITION_UNAVAILABLE:
+          console.log("Current location not available");
+          break;
+        case error.TIMEOUT:
+          console.log("Timeout");
+          break;
+        default:
+          console.log("unknown error");
+          break;
+        }
+      }
+	  
+	  function zoomToLocation(features) {
+       //$.mobile.hidePageLoadingMsg(); //true hides the dialog
+        var points = [];
+          if(features.coords){
+            //results of geolocation find location 
+            myLocation(features);
+		  }else{
+            //url parameter with one or more id 
+              var query = new esri.tasks.Query();
+              query.where=('ID in (' + features.ID + ')' );
+             // query.objectIds = [features];
+              selectionLayer.clear();
+              var graphic;
+			  artsWalk.queryFeatures(query,function(featureSet){
+				//var theSym = new esri.symbol.SimpleMarkerSymbol();
+                dojo.forEach(featureSet.features,function(feature){
+                   //add the selected features to the selection layer 
+				   //feature.setSymbol(theSym);
+                   graphic = new esri.Graphic(feature.geometry, null, feature.attributes);
+				   selectionLayer.add(graphic);
+                });
+                  //zoom to extent of all graphics 
+                  if(featureSet.features.length === 1){
+                    //only one so centerAt
+                    //esri.config.defaults.map.panDuration = 0;
+                    map.centerAt(featureSet.features[0].geometry);
+                    //esri.config.defaults.map.panDuration = 350;
+					//map.centerAndZoom(featureSet.features[0].geometry, 1);
+                  }else{
+                    var extent = esri.graphicsExtent(featureSet.features);
+                    map.setExtent(extent, true); //This doesn't seem to set the scale properly.
+                  }
+              });
+        }
+        console.log('The location has been zoomed to!');
+        $.mobile.hidePageLoadingMsg();
+      }
+	  
+	  function jQueryReady() {
+		$('.artistVenue').live('click',
+			function(e) {
+				
+				//params = $(e.target).jqmData("params");
+                parameters = $('.artistVenue').data("params")
+				console.log(parameters);
+				var paramsObj = dojo.queryToObject(parameters);
+				var queryEventsVenue = new esri.tasks.Query();
+				queryEventsVenue.returnGeometry = false;
+				queryEventsVenue.outFields = ["Time, Day, Event"];
+				queryEventsVenue.orderByFields = ["Sort"];
+				queryEventsVenue.where = "ID= " + paramsObj["ID"];
+				queryTaskEvents.execute(queryEventsVenue,showEvents);
+				
+				queryArtists.where = "ID= " + paramsObj["ID"];
+				queryTaskArtists.execute(queryArtists,showArtist);
+                
+                var queryVenueName = new esri.tasks.Query();
+                queryVenueName.returnGeometry = false;
+                queryVenueName.outFields = ["Business", "ID"];
+                queryVenueName.where = "ID= " + paramsObj["ID"];
+                queryTaskVenues.execute(queryVenueName,showWebsite);
+				//run some javascript based on the params to select features on map and zoom
+				//clear existing venue page content or at least set whats there = "" and then the new value
+				//query to retrieve other necessary data such as website based on venue ID
+			}
+		);
+        $('.venue').live('click',
+			function(e) {
+				
+				parameters = $(e.target).jqmData("params");
+                //params = $('.venue').data("params")
+				console.log(parameters);
+				var paramsObj = dojo.queryToObject(parameters);
+				var queryEventsVenue = new esri.tasks.Query();
+				queryEventsVenue.returnGeometry = false;
+				queryEventsVenue.outFields = ["Time, Day, Event"];
+				queryEventsVenue.orderByFields = ["Sort"];
+				queryEventsVenue.where = "ID= " + paramsObj["ID"];
+				queryTaskEvents.execute(queryEventsVenue,showEvents);
+				
+				queryArtists.where = "ID= " + paramsObj["ID"];
+				queryTaskArtists.execute(queryArtists,showArtist);
+                
+                var queryVenueName = new esri.tasks.Query();
+                queryVenueName.returnGeometry = false;
+                queryVenueName.outFields = ["Business", "ID"];
+                queryVenueName.where = "ID= " + paramsObj["ID"];
+                queryTaskVenues.execute(queryVenueName,showWebsite);
+				//run some javascript based on the params to select features on map and zoom
+				//clear existing venue page content or at least set whats there = "" and then the new value
+				//query to retrieve other necessary data such as website based on venue ID
+			}
+		);
+		/*$('.map').live('click',
+			function(e) {
+                resizeMap();
+				params = $(e.target).jqmData("params");
+				console.log(params);
+                if(paramsObj != undefined) {
+                    var paramsObj = dojo.queryToObject(params);
+                    zoomToLocation(paramsObj);
+                } else {
+                    //showLocation();
+                    
+                }
+				//run some javascript based on the params to select features on map and zoom
+			}
+		);*/
+		$('.artist').live('click',
+			function(e) {
+				parameters = $(e.target).jqmData("params");
+				var paramsObj = dojo.queryToObject(parameters);
+				artistName(paramsObj);
+				console.log(paramsObj);
+				//run some javascript based on the params to select features on map and zoom
+			}
+		);
+		/*$('#searchvenue').bind('pageshow',function() {
+			$('#venueList').listview('refresh');
+            console.log('made it');
+		});
+		$('#searchartist').bind('pageshow',function() {
+            $('#myList').listview('refresh');
+		});*/
+        $('#mapPage').live('pageshow',function(e) {
+            //	console.log(map.extent);
+            //parameters = $(e.target).jqmData("params");
+			if (map) {
+            if (!isNaN(map.extent.xmin) && shownOnce == false) {
+                shownOnce = true;
+                resizeMap();
+            }
+            if(flag == 0) {
+                if(parameters != undefined) {
+                    var paramsObj = dojo.queryToObject(parameters);
+                    zoomToLocation(paramsObj);
+                } else {
+                    showLocation();
+                }
+            }
+            flag = 0;
+			}
+        });
+        $('.mapPage').live('click',function(e) {
+            flag = 1;
+            showLocation();
+        });
+		$('.mapVenue').live('click',function(e) {
+            //params = $('.mapVenue').data("params");
+            parameters = $('.mapVenue').jqmData("params");
+            console.log(parameters);
+        });
+		$('.mapVenue1').live('click',function(e) {
+            //params = $('.mapVenue').data("params");
+            parameters = $('.mapVenue1').jqmData("params");
+            console.log(parameters);
+        });
+        $('.multiPass').live('click',function(e) {
+            flag = 1;
+            var pass2 = dojo.queryToObject(pass);
+            zoomToLocation(pass2);
+        });
+      /*$('#mapPage').live('pageshow', function (event, ui) {
+          resizeMap();
+        });*/
+    }
+      function showLocation() {
+        console.log(navigator.geolocation);
+        if (navigator.geolocation) {
+          $.mobile.showPageLoadingMsg();
+          navigator.geolocation.getCurrentPosition(myLocation, locationError);
+        }
+      }
+
+      function myLocation(location) {
+        //$.mobile.hidePageLoadingMsg(); //true hides the dialog
+        //check location
+        console.log('Now obtaining your position!');
+        var pt;
+        if (location.spatialReference && location.spatialReference.wkid === 102100) {
+          pt = location;
+        } else {
+         pt = esri.geometry.geographicToWebMercator(new esri.geometry.Point(location.coords.longitude, location.coords.latitude));
+        }
+		map.graphics.clear();
+        var symbol = new esri.symbol.PictureMarkerSymbol("here.png", 35, 35);
+        map.graphics.add(new esri.Graphic(pt, symbol));
+        map.centerAndZoom(pt,3);
+        $.mobile.hidePageLoadingMsg();
+      }
+
+      function orientationChanged() {
+		$.mobile.silentScroll(0);
+        if (map) {
+			//map.reposition();
+			//map.resize();
+            setTimeout(function(){resizeMap();},1000);
+        }
+      }
+
+      function resizeMap() {
+        if (map) {
+          //get header height and subtract from screen height
+          var ht = dojo.window.getBox().h-dojo.position(dojo.byId('header')).h;
+
+			$('#map').css("height",ht );
+         //$('#map').css("width", "auto");
+			//$('#map').css("height",screen.height);
+			$('#map').css("width","auto");
+
+			map.reposition();
+			map.resize();
+         console.log('The map has been resized!');
+        }
+      }
+    
+      function updateLayerVisibility() {
+        //toggle layer visibility 
+        var inputs = dojo.query(".custom");
+        //hide selection layer and venue layer 
+        if(inputs[0].checked){
+          artsWalk.show();
+          selectionLayer.show();
+        }else{
+          artsWalk.hide();
+          selectionLayer.hide();
+        }
+
+
+      }
+	  
+      function listEvents(results2) {
+        $('#myList').append('<li data-role="list-divider" data-theme="b">Events</li>');
+		for (var i=0, il=results2.features.length; i<il; i++) {
+			var featureAttributes = results2.features[i].attributes;
+			var count = 0;
+			for (att in featureAttributes) {
+				count++
+			}
+			for (var g=0, gl=count/4; g<gl; g++) {
+				$('#myList').append('<li><a href="#venue" data-params="ID=' + featureAttributes["ID"] + '" data-transition="slide" class="venue">' + featureAttributes["Event"] + '</a></li>');
+			}
+		}
+		if ($('#searchartist').is(':visible')) {
+			$("#myList").listview("refresh");
+		}
+	  }
+      
+	  function listArtists(results1) {
+        var s = "";
+		var f = "";
+		var u = 0;
+		$('#myList').append('<li data-role="list-divider" data-theme="b">Artists</li>');
+		for (var i=0, il=results1.features.length; i<il; i++) { //iterate through all of the records
+		  var featureAttributes = results1.features[i].attributes;
+		  var count = 0;
+		  for (att in featureAttributes) {
+			count++;
+		  }
+		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the business field and the ID field, but we only want one listing for each business
+				$('#myList').append('<li><a href="#artist" data-params="ID=' + featureAttributes["ID"] + '&Artist=' + featureAttributes["Artist"] + '" data-transition="slide" class="artist">' + featureAttributes["Artist"] + '</a></li>');
+			  }
+		}
+	  }
+	  
+	  function listVenues(results) {
+        var s = "";
+		var f = "";
+		var u = 0;
+		for (var i=0, il=results.features.length; i<il; i++) {		//iterate through all of the venues
+		  var featureAttributes = results.features[i].attributes;
+		  var count = 0;
+		  for (att in featureAttributes) {
+			count++;
+		  }
+		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the business field and the ID field, but we only want one listing for each business
+			$('#venueList').append('<li><a href="#venue" data-params="ID=' + featureAttributes["ID"] + '&Business=' + featureAttributes["Business"] + '" data-transition="slide" class="venue">' + featureAttributes["Business"] + '</a></li>'); //this link passes the business id into the next page
+		  }
+		}
+		if ($('#searchvenue').is(':visible')) {
+			$("#venueList").listview("refresh");
+		}	
+	  }
+	  
+		function showWebsite(results1) {
+			console.log(results1);
+			$('#title').empty();
+			$('#onmap').empty();
+            console.log(results1.features[0].attributes["Business"]);
+			$('#title').append(results1.features[0].attributes["Business"]);
+			/*if (results1.features[0].attributes["Website"] == null) { //condition statement for businesses with no website, add this back in when website data is available
+				$('#website').append("<div align='center'>Website not available.</div>").trigger('create'); //calling .trigger('create'); generates the jquery styling for dynamic anchor tags and div tags
+			} else {
+				var site = results1.features[0].attributes["Website"];
+				$('#website').append("<a href='" + site + "' data-role='button' data-theme='b'>Venue website</a>").trigger('create');
+			}*/
+			$('#onmap').append('<a href="#mapPage" data-params="ID=' + results1.features[0].attributes["ID"] + '" data-role="button" data-theme="b" data-transition="pop" class="mapVenue">Map</a>').trigger('create');
+            //parameters = "ID=" + results1.features[0].attributes["ID"];
+		}
+		
+		function showEvents(results2) {
+			$('#fridayVenue').empty();
+			$('#saturdayVenue').empty();
+			console.log(results2);
+			var u = 0;
+			var s = "";
+			var f = "";
+			$('#fridayVenue').append("<li data-role='list-divider'>Friday events</li>");
+			$('#saturdayVenue').append("<li data-role='list-divider'>Saturday events</li>");
+			for (var i = 0, il = results2.features.length; i < il; i++) { //iterate through all of the events
+				var featureAttributes = results2.features[i].attributes;
+				if (results2.features[i].attributes["Day"] == "Friday") { //seperate the Friday events from the Saturday events
+					var f = "";
+					for (att in featureAttributes) {
+						if (att != "Day") {
+							if (u < 1) { //checking against the value of 'u' enables the code to pull the name of the event as well as the time and piece them together
+								f = f + "<li>" + featureAttributes[att] + " "; //append time
+								u++
+							} else {
+								f = f + featureAttributes[att] + "</li>"; //append event
+								u = 0;
+							}
+						}
+					}
+					$('#fridayVenue').append(f);
+				} else if (results2.features[i].attributes["Time"] == "Ongoing" || results2.features[i].attributes["Time"] == "Various times") { //this statement was created to address flaws in the data, if a more consistant data structure is used in the future, this should be modified.
+					for (att in featureAttributes) {
+						if (att != "Day") {
+							if (u < 1) {
+								f = "<li>" + featureAttributes[att] + " "; //this code assumes that ongoing events occur both days
+								s = "<li>" + featureAttributes[att] + " ";
+								u++;
+							} else {
+								f = f + featureAttributes[att] + "</li>"; //this code assumes that ongoing events occur both days
+								s = s + featureAttributes[att] + "</li>";
+								u = 0;
+							}
+						}
+					}
+					$('#fridayVenue').append(f);
+					$('#saturdayVenue').append(s);
+				} else { //the Saturday events hit this statement
+					var s = "";
+					for (att in featureAttributes) {
+						if (att != "Day") {
+							if (u < 1) {
+								s = s + "<li>" + featureAttributes[att] + " "; //append time
+								u++
+							} else {
+								s = s + featureAttributes[att] + "</li>"; //append event
+								u = 0;
+							}
+						}
+					}
+					$('#saturdayVenue').append(s);
+				}
+			}
+			if (f == "") {
+				f = "<li>No events</li>";
+				$('#fridayVenue').append(f);
+			}
+			if (s == "") {
+				s = "<li>No events</li>";
+				$('#saturdayVenue').append(s);
+			}
+			$('#fridayVenue').listview(); //calling .listview()
+			$('#fridayVenue').listview('refresh');
+			$('#saturdayVenue').listview();
+			$('#saturdayVenue').listview('refresh');
+		}
+		
+		
+		function artistName(results2) {
+			$('#artistTitle').empty();
+			//var a = esri.urlToObject(dojo.doc.location.href).query.Artist; //the name of the artist is passed in through the URL because the artists do not have a unique ID of their own, they only have the ID of the business they are performing at.
+			dojo.byId("artistTitle").innerHTML = results2.Artist;
+			queryVenues.where = "ID= " + results2["ID"];
+			queryTaskVenues.execute(queryVenues,showVenue);
+		}
+		
+		function showVenue(results1) {
+			console.log(results1);
+			$('#artistLocation').empty();
+			$('#artistMap').empty();
+			$('#artistLocation').append("<a href='#venue' data-params='ID=" + results1.features[0].attributes["ID"] + "&Business=" + results1.features[0].attributes["Business"] + "' data-role='button' data-theme='b' data-transition='fade' class='artistVenue'>" + results1.features[0].attributes["Business"] + "</a>").trigger('create'); //this code passes the business name as well as the ID
+			$('#artistMap').append('<a href="#mapPage" data-params="ID=' + results1.features[0].attributes["ID"] + '" data-role="button" data-theme="b" data-transition="pop" class="mapVenue1">Map</a>').trigger('create');
+		}
+		
+		function showArtist(results3) {
+			$('#artistVenue').empty()
+			var b = "";
+			$('#artistVenue').append("<li data-role='list-divider'>Presenting Artists</li>");
+			for (var i = 0, il = results3.features.length; i < il; i++) { //iterate through all of the events
+				var featureAttributes = results3.features[i].attributes;
+				$('#artistVenue').append("<li><a href='#artist' data-params='ID=" + featureAttributes["ID"] + "&Artist=" + featureAttributes["Artist"] + "' data-role='button' data-transition='slide' class='artist'>" + featureAttributes["Artist"] + "</a></li>");
+			}
+			$('#artistVenue').listview();
+			$('#artistVenue').listview('refresh');
+		}
+		dojo.addOnLoad(init);
+		$(document).bind('pageinit', jQueryReady());
+		</script>
+		</head>
+<body>
+
+<div data-role="page" id="index" data-theme="d">
+	<div data-role="header" data-theme="b">
+		<div>
+			<h4 id="appTitle"></h4>
+		</div>
+	</div>
+	<div data-role="content" data-theme="d">	
+		Welcome! This app will function as your virtual guide while you visit Arts Walk. You can find businesses, artists, and events using the buttons below. Information subject to change.
+        <a href="#rightnow" id="nowbtn" data-role="button" data-icon="check" data-theme="b" data-transition="slide" class="ui-disabled">Happening now</a>		
+        <a href="#mapPage" id="mapbtn" data-role="button" data-icon="star" data-theme="b" data-transition="pop" class="mapPage ui-disabled">Find on map</a>
+		<a href="#friday" id="schedulebtn" data-role="button" data-icon="info" data-theme="b" data-transition="slide" class="ui-disabled">Event schedule</a>
+        <a href="#searchvenue" id="venuebtn" data-role="button" data-icon="search" data-theme="b" data-transition="slide" class="ui-disabled">Search by venue</a>
+		<a href="#searchartist" id="artistbtn" data-role="button" data-icon="search" data-theme="b" data-transition="slide" class="ui-disabled">Search artists and events</a>
+	</div>
+	<div data-role="footer" class="footer-docs" data-theme="d">
+		<div class="right"><a href="#about" data-role="button" data-mini="true" data-inline="true" data-rel="dialog" data-ajax="true" data-transition="pop" data-theme="b">About</a>
+		<a style='right: 0px; float: right; position: absolute; display: inline;' href="https://www.surveymonkey.com/s/ArtsWalkMobileAppFeedback" data-role="button" data-mini="true" data-inline="true" data-ajax="true" data-transition="pop" data-theme="b">Feedback</a></div>
+	</div>
+</div>
+
+<div data-role="page" id="about">
+	<div data-role="header">
+		<h1 id="aboutTitle"></h1>
+	</div>
+	<div data-role="content">	
+		<p>Olympia Arts Walk Mobile Guide</p>
+		<p>v1.0.0, September 2012</p>
+		<p>Developed by Esri&reg; for the City of Olympia, WA</p>
+	</div>
+</div>
+
+<div data-role="page" id="rightnow" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b">
+		<h1>Happening Now</h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#mapPage" style="right: 40px; float: right; top: 3px; position: absolute; display: inline;" data-theme="b" data-ajax="false" class="multiPass" data-inline="true">Map</a>
+	</div>
+	<div data-role="content">
+		<ul data-role="listview" id="now" data-divider-theme="b"></ul>
+		<div id="empty"></div>
+	</div>
+</div>
+
+<div data-role="page" id="friday" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b">
+		<h1>Event Schedule</h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div>
+	<div data-role="content">
+		<div data-role="controlgroup" data-type="horizontal" class="center-wrapper">
+			<a href="#friday" data-role="button" class="ui-btn-active" data-theme="b">Friday</a>
+			<a href="#saturday" data-role="button" data-theme="b">Saturday</a>
+		</div>
+        <br/>
+		<ul data-role="listview" id="fridayEvents" data-divider-theme="b"></ul>
+	</div>	
+</div>
+
+<div data-role="page" id="saturday" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b" data-add-back-btn="true">
+		<h1>Event Schedule</h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div>
+	<div data-role="content">
+		<div data-role="controlgroup" data-type="horizontal" class="center-wrapper">
+			<a href="#friday" data-role="button" data-theme="b">Friday</a>
+			<a href="#saturday" data-role="button" class="ui-btn-active" data-theme="b">Saturday</a>
+		</div>
+        <br/>
+		<ul data-role="listview" id="saturdayEvents" data-divider-theme="b"></ul>
+	</div>	
+</div>
+
+<div data-role="page" id='mapPage' style="width:100%;height:100%;overflow:hidden;" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div id="header" data-role="header" data-theme='b'>
+		<h1 id="mapPageTitle"></h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="pop" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a onclick='showLocation()' id='geolocation' style='right: 40px; float: right; position: absolute; display: inline;' data-theme='b' data-transition='fade' data-ajax='false' data-icon='geolocation' data-iconpos='notext' data-inline="true"></a>
+	</div>
+	<div data-role="content" id="mapcontent" data-theme='d' style="padding:0;width:100%;height:100%;">
+		<div id="map">
+			<div style="right: 0%; position: absolute; float: right; z-index: 5000;">
+				<input type="checkbox" data-inline="true" checked="checked" name="checkbox-1" id="custom" class="custom" data-theme='b'  data-mini="true" onclick="updateLayerVisibility();"/>
+				<label for="custom">Venues</label>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div data-role="page" id="searchartist" class="type-interior" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b">
+		<h1>Search Artists/Events</h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div>
+	<div data-role="content">
+		<div class="content-primary">
+			<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search artists..." data-filter-theme="b"data-theme="d" data-divider-theme="b"></ul> <!--the list items are programatically added to this tag-->
+		</div>
+	</div>
+</div>
+
+<div data-role="page" id="searchvenue" class="type-interior" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b">
+		<h1>Search Venues</h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div>
+	<div data-role="content" data-theme="b">
+		<div class="content-primary">	
+			<ul data-role="listview" id="venueList" data-filter="true" data-filter-placeholder="Search venues..." data-filter-theme="b"data-theme="d" data-divider-theme="b"></ul> <!--the list content is loaded into this tag dynamically-->
+		</div>
+	</div>
+</div>
+
+<div data-role="page" data-theme="d" id="venue"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b" data-add-back-btn="true">
+		<h1>
+			<div id="title" align="center"></div>
+		</h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div>
+	<div data-role="content">
+		<div id="onmap"></div>
+		<!--<div id="website"></div>-->
+		<br />
+		<ul data-role="listview" id="artistVenue" data-divider-theme="b"></ul>
+		<br />
+		<ul data-role="listview" id="fridayVenue" data-divider-theme="b"></ul>
+		<br />
+		<ul data-role="listview" id="saturdayVenue" data-divider-theme="b"></ul>
+	</div>
+</div>
+
+<div data-role="page" id="artist" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="b" data-add-back-btn="true">
+		<h1><div id="artistTitle" align="center"></div></h1>
+		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div>
+	<div data-role="content">	
+		<div class="ui-bar ui-bar-c" align="center"> <!--one of jquery's divider bars was used here-->
+			<h3>Presenting at:</h3>
+		</div>
+		<div id="artistLocation"></div>
+		<div id="artistMap"></div>
+	</div>
+</div>
+
+</body>
+</html>

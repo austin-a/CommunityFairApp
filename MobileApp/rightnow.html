@@ -1,0 +1,372 @@
+<!DOCTYPE html> 
+<html>
+<head>
+	<meta charset="utf-8" /> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>Olympia Arts Walk</title> 
+	<link rel="stylesheet" href="themes/Olympia.min.css" />
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css" />
+	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+</head> 
+<body> 
+
+<div data-role="page" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+
+<style type="text/css">
+	.right {display: inline;}
+	.left {display: inline;}
+	h4 {text-align: center;}
+</style>
+
+<script type="text/javascript">var djConfig = {parseOnLoad: true};</script> 
+<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script>
+<script type="text/javascript">
+	dojo.require("esri.map");
+	dojo.require("esri.dijit.Legend");
+	dojo.require("esri.arcgis.utils");
+	dojo.require("esri.tasks.query");
+
+	var queryTask, query, query2;
+	var pass = "";
+
+	function init() {
+		//query events
+		queryTask = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/2");
+		//build query filter
+        query = new esri.tasks.Query();
+        query.returnGeometry = false;
+        query.outFields = ["Time, Day, Event, ID"];
+		query.orderByFields = ["Sort"];
+
+		query.where = "1=1";
+		queryTask.execute(query,rightNow);
+	}
+	
+	//initiates a second query for spatial data, not currently used
+	function taskTwo(query1) {
+		var stillHere = query1;
+		queryTask2 = new esri.tasks.QueryTask("http://services.arcgis.com/2zRtyrQ6q4mGrLJK/arcgis/rest/services/ArtsWalkVenues/FeatureServer/0");
+		//build query filter
+        query2 = new esri.tasks.Query();
+        query2.returnGeometry = true;
+        query2.outFields = ["ID"];
+		query2.orderByFields = ["ID"];
+		//var urlObject = esri.urlToObject(dojo.doc.location.href);
+		query2.where = "1=1";
+		//query2.where = "ID = " + query1.ID;
+		//assign geometry to first query (event table). This didn't work (see next function).
+		//query1.geometry.x = query2.geometry.x;
+		//query1.geometry.y = query2.geometry.y;
+		queryTask2.execute(query2, function(query2) {loadData(stillHere,query2)}); //passes in both queries to the loadData function.
+		//loadData(query1, query2);
+    }
+	//failed attempt at combining two queries
+	function returnQuery(query1,query2) {
+		//return query2;
+		loadData(query1,query2);
+	}
+	
+	function loadData(query1, query2) {
+		//Assign geometry from query2 to query1.
+		//for (var i=0, il=query1.features.length; i<il; i++) {
+			query1.features.geometry.x = query2.features.geometry.x;
+			console.log(query2.feature[0].geometry.x);
+			query1.features.geometry.y = query2.features.geometry.y;
+		geolocation(query1); //pass events with geometry into geolocation function to obtain the client's position.
+	}
+	function geolocation(events) {
+		navigator.geolocation.getCurrentPosition(function(location){computeDistance(location, events);}, locationError);
+	}
+	
+	function getTheDay() {
+		var montharray=new Array("January","February","March","April","May","June","July","August","September","October","November","December")
+		var dayarray = new Array ("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+		var mydate = new Date();
+		var year = mydate.getYear();
+		if (year < 1000) {
+			year += 1900;
+		}
+		var day = mydate.getDay();
+		var month = mydate.getMonth();
+		var daym = mydate.getDate();
+		if (daym < 10) {
+			daym = "0" + daym;
+		}
+		var hours = mydate.getHours();
+		var minutes = mydate.getMinutes();
+		var seconds = mydate.getSeconds();
+		var dn = "";
+		if (hours >= 12) {
+			dn = "";
+		}
+		if (hours > 12) {
+			hours = hours - 12;
+		}
+		if (hours == 0) {
+			hours = 12;
+		}
+		if (minutes <= 9) {
+			minutes = "0" + minutes;
+		}
+		if (seconds <= 9) {
+			seconds = "0" + seconds;
+		}
+		//Hire change font size
+		var cdate= "< small> < font color='ffffff' face='Arial'>"
+		  +dayarray[day]
+		  +", "+daym+" "+montharray[month]+", "+year
+		  +" "+hours+":"+minutes+":"+seconds+" "+dn
+		  +"  < /small>";
+
+		return day;
+	}
+		
+	function getTheTime() {
+		var montharray=new Array("January","February","March","April","May","June","July","August","September","October","November","December")
+		var dayarray = new Array ("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+		var mydate = new Date();
+		var year = mydate.getYear();
+		if (year < 1000) {
+			year += 1900
+		}
+		var day = mydate.getDay();
+		var month = mydate.getMonth();
+		var daym = mydate.getDate();
+		if (daym < 10) {
+			daym = "0" + daym;
+		}
+		var hours = mydate.getHours();
+		var minutes = mydate.getMinutes();
+		var seconds = mydate.getSeconds();
+		var dn = "";
+		if (hours >= 12) {
+			dn = "";
+		}
+		if (hours > 12) {
+			hours = hours - 12;
+		}
+		if (hours == 0) {
+			hours = 12;
+		}
+		if (minutes <= 9) {
+			minutes = "0" + minutes;
+		}
+		if (seconds <= 9) {
+			seconds = "0" + seconds;
+		}
+		//Hire change font size
+		var cdate= "< small> < font color='ffffff' face='Arial'>"
+		  +dayarray[day]
+		  +", "+daym+" "+montharray[month]+", "+year
+		  +" "+hours+":"+minutes+":"+seconds+" "+dn
+		  +"  < /small>";
+
+		return hours;
+	}
+	
+	function rightNow(events) {
+		var time = getTheTime();
+		//use these to test the program and set the day and time.
+		//var time = 12;
+		var day = getTheDay();
+		//var day = 6;
+		var u = 0;
+		var l = 0;
+		var c = 0;
+		var s = 0;
+		var f, eventtime;
+		var dayarray = new Array ("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+		var sooner = time - 1;
+		var later = time + 1;
+		for (var i=0, il=events.features.length; i<il; i++) {
+			var next = "";
+			var featureAttributes = events.features[i].attributes;
+			if (dayarray[day] == events.features[i].attributes["Day"]) {
+				//Begin copied code
+				while (next="" || s < 150) {
+					second = events.features[i].attributes["Time"].charAt(s);
+					if (second == "-") {
+						if (isNaN(parseInt(events.features[i].attributes["Time"].charAt(s+2)))) {
+							next="next";
+							second = events.features[i].attributes["Time"].charAt(s+1);
+						}
+						else {
+							next="next";
+							second = events.features[i].attributes["Time"].charAt(s+1) + events.features[i].attributes["Time"].charAt(s+2);
+						}
+					}
+					s++;
+				}
+				if (s == 150) {
+					second = events.features[i].attributes["Time"].charAt(0);
+				}
+				var one = events.features[i].attributes["Time"].charAt(0);
+				var two = events.features[i].attributes["Time"].charAt(1);
+				if (one == 1) {
+					if (isNaN(parseInt(two, 10))) {
+						//Insert new code here for when the second number is NaN.
+						for (att in featureAttributes) {
+							if (att != "Day" && att != "ID") {
+								if (time-1 <= second && time+1 >= one) {
+								//if (sooner <= one && later >= one) {
+									if (u < 1) {
+										f = "<li><a href='venue4.html?ID=" + events.features[i].attributes["ID"] + "' data-ajax='false'>" + featureAttributes[att] + " ";
+										pass = pass + events.features[i].attributes["ID"] + ",";
+										u++;
+									}
+									else {
+										f = f + featureAttributes[att] + "</a></li>";
+										u = 0;
+									}
+								}
+							}
+						}
+					}
+					else {
+						//Insert code here for when there is a second number.
+						var both = one + two;
+						if (s == 150) {
+							second = both;
+						}
+						for (att in featureAttributes) {
+							if (att != "Day" && att != "ID") {
+								if (time-1 <= second && time+1 >= both) {
+									if (u < 1) {
+										f = "<li><a href='venue4.html?ID=" + events.features[i].attributes["ID"] + "' data-ajax='false'>" + featureAttributes[att] + " ";
+										pass = pass + events.features[i].attributes["ID"] + ",";
+										console.log(this.pass);
+										u++;
+									}
+									else {
+										f = f + featureAttributes[att] + "</a></li>";
+										u = 0;
+									}
+								}
+							}
+						}
+					}	
+					$('#now').append(f);
+				}
+				//End of copied code
+				else if (time-1 <= second && time+1 >= one) {
+					for (att in featureAttributes) {
+						if (att != "Day" && att != "ID") {
+							if (u < 1) {
+								f = "<li><a href='venue4.html?ID=" + events.features[i].attributes["ID"] + "' data-ajax='false'>" + featureAttributes[att] + " ";
+								pass = pass + events.features[i].attributes["ID"] + ",";
+								u++;
+							}
+							else {
+								f = f + featureAttributes[att] + "</a></li>";
+								u = 0;
+							}
+						}
+					}
+					$('#now').append(f);
+				}
+			
+			}
+		  if (events.features[i].attributes["Time"] == "Ongoing" || events.features[i].attributes["Time"] == "Various times") {
+			var count = 0;
+			for (att in featureAttributes) {
+				if (att != "Day" && att != "ID") {
+					if (u < 1) {
+						f = "<li><a href='venue3.html?ID=" + events.features[i].attributes["ID"] + "' data-ajax='false'>" + featureAttributes[att] + " ";
+						pass = pass + events.features[i].attributes["ID"] + ",";
+						u++;
+					}
+					else {
+						f = f + featureAttributes[att] + "</a></li>";
+						u = 0;
+					}
+				}
+			  }
+			  $('#now').append(f);
+		  }
+		  else {
+			f = "";
+		  }
+		$('#now').listview();
+		$('#now').listview('refresh');
+		}
+		if (f == "") {
+			$('#empty').append("</br><div align='center'>No events at this time</div><a href='friday2.html' data-role='button' data-theme='b'>Schedule</a>").trigger('create');
+		}
+		pass = pass.slice(0,pass.length-1);
+		$('#onmap').append('<a href="map5.html?ID=' + pass + '" data-role="button" data-theme="b" data-inline="true" data-ajax="false">Map</a>').trigger('create');
+	}
+	
+	function computeDistance(location, events) {
+		var distance = [];
+		for (var i=0, il=events.features.attributes.geometry.x.length; i<il; i++) {
+			var inPoint = new esri.geometry.Point(evt.mapPoint.x, evt.mapPoint.y, map.spatialReference);
+			inputPoints.push(inPoint);
+			var distParams = new esri.tasks.DistanceParameters();
+			distParams.distanceUnit = esri.tasks.GeometryService.UNIT_STATUTE_MILE;
+			
+			distParams.geometry1 = inputPoints[inputPoints.length - 2];
+			distParams.geometry2 = navigator.geolocation.getCurrentPosition();
+			distParams.geodesic = true;
+			//draw a polyline to connect the input points
+			var polyline = new esri.geometry.Polyline(map.spatialReference);
+			polyline.addPath([distParams.geometry1, distParams.geometry2]);
+			map.graphics.add(new esri.Graphic(polyline, polylineSymbol));
+			//Calculate the geodesic distance 
+			geometryService.distance(distParams, function(distance) {
+			  legDistance.push(dojo.number.format(distance, {
+				  places: 2
+			  }));
+			  /*var totalDistance += distance;
+			  var content = "";
+			  dojo.forEach(legDistance, function(leg, index) {
+				  content = content + "<b>Leg " + (index + 1) + "</b>" + ": " + leg + "<br />";
+			  });
+			  content = content + "<b>Total:</b> " + dojo.number.format(totalDistance, {
+				  places: 2
+			  }) + " miles <br />";
+			  //dojo.byId('distanceDetails').innerHTML = content;*/
+			});
+			distance.push(distance);
+		}
+		name(function(distance){rightNow(location, distance)});
+	}
+	
+	function locationError(error) {
+		switch (error.code) {
+		case error.PERMISSION_DENIED:
+			console.log("Location not provided");
+			break;
+		case error.POSITION_UNAVAILABLE:
+			console.log("Current location not available");
+			break;
+		case error.TIMEOUT:
+			console.log("Timeout");
+			break;
+		default:
+			console.log("unknown error");
+			break;
+		}
+	}
+	
+	function toMap(pass) {
+		location.href = "map6.html?ID=" + pass;
+	}
+								
+	dojo.addOnLoad(init);
+	</script>
+	<div data-role="header" data-theme="b">
+		<h1>Happening Now</h1>
+		<a href="index.html" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="index.html" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a onclick="toMap(pass)" style="right: 40px; float: right; top: 3px; position: absolute; display: inline;" data-theme="b" data-ajax="false" data-inline="true">Map</a>
+	</div>
+	
+	<div data-role="content">
+		<ul data-role="listview" id="now" data-divider-theme="b"></ul>
+		<div id="empty"></div>
+	</div>
+	
+</div>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+    
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Olympia Arts Walk</title>
+        <link rel="stylesheet" href="themes/Olympia.min.css"
+        />
+        <link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css"
+        />
+        <script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+        <script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+        <script type="text/javascript">
+            var djConfig = {
+                parseOnLoad: true
+            };
+			$.mobile.ajaxEnabled = false;
+        </script>
+        <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script>
+    </head>
+    
+    <body>
+        <div data-role="page" data-theme="d" id="home"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+            <script type="text/javascript">
+
+                dojo.require("esri.map");
+    
+                dojo.require("esri.arcgis.utils");
+                dojo.require("esri.tasks.query");
+				
+                    /*$(document).bind('pagechange',function(event,data){
+ 
+                     //load dojo when the url actually changes. 
+						
+                        dojo.addOnLoad(init);
+                    });*/
+				
+
+
+
+                function init() {
+                    console.log('init');
+                    var url = dojo.doc.location.href;
+                    //build query
+                    var queryTask1 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/0"); //three query tasks are used,
+                    var queryTask2 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/2"); //one for each of the data sets
+                    var queryTask3 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/1");
+                    //dojo.connect(queryTask, "onComplete", showResults);
+                    var urlObject = esri.urlToObject(url);
+                    var id;
+
+                    if (urlObject.query && urlObject.query.ID) {
+                        id = urlObject.query.ID;
+                    } else {
+                        console.log('no id');
+                        return;
+                    }
+
+
+                    //build query filter1, business table
+                    var query1 = new esri.tasks.Query();
+                    query1.returnGeometry = false;
+                    query1.outFields = ["Business, Website, ID"];
+                    query1.orderByFields = ["Business"];
+
+                    query1.where = "ID = " + id; //query against the value passed in from the URL
+                    queryTask1.execute(query1, showResults1);
+
+                    //build query filter2, events table
+                    var query2 = new esri.tasks.Query();
+                    query2.returnGeometry = false;
+                    query2.outFields = ["Day, Time, Event"];
+                    query2.orderByFields = ["Sort"];
+                    query2.where = "ID = " + id;
+
+                    queryTask2.execute(query2, showResults2);
+
+                    //build query filter3, artist table
+                    var query3 = new esri.tasks.Query();
+                    query3.returnGeometry = false;
+                    query3.outFields = ["Artist, ID"];
+                    query3.orderByFields = ["ID"];
+
+                    query3.where = "ID = " + id;
+                    //query2.where = "1=1";
+                    queryTask3.execute(query3, showResults3);
+
+                }
+
+                function showResults1(results1) {
+                    $('#title').append(results1.features[0].attributes["Business"]);
+                    /*if (results1.features[0].attributes["Website"] == null) { //condition statement for businesses with no website
+                        $('#website').append("<div align='center'>Website not available.</div>").trigger('create'); //calling .trigger('create'); generates the jquery styling for dynamic anchor tags and div tags
+                    } else {
+                        var site = results1.features[0].attributes["Website"];
+                        $('#website').append("<a href='" + site + "' data-role='button' data-theme='b'>Venue website</a>").trigger('create');
+                    }*/
+                    $('#onmap').append('<a href="map6.html?ID=' + results1.features[0].attributes["ID"] + '" data-role="button" data-theme="b" data-ajax="false">Map</a>').trigger('create');
+                }
+
+                function showResults2(results2) {
+                    var u = 0;
+                    var s = "";
+                    var f = "";
+                    $('#friday').append("<li data-role='list-divider'>Friday events</li>");
+                    $('#saturday').append("<li data-role='list-divider'>Saturday events</li>");
+                    for (var i = 0, il = results2.features.length; i < il; i++) { //iterate through all of the events
+                        var featureAttributes = results2.features[i].attributes;
+                        if (results2.features[i].attributes["Day"] == "Friday") { //seperate the Friday events from the Saturday events
+                            var f = "";
+                            for (att in featureAttributes) {
+                                if (att != "Day") {
+                                    if (u < 1) { //checking against the value of 'u' enables the code to pull the name of the event as well as the time and piece them together
+                                        f = f + "<li>" + featureAttributes[att] + " "; //append time
+                                        u++
+                                    } else {
+                                        f = f + featureAttributes[att] + "</li>"; //append event
+                                        u = 0;
+                                    }
+                                }
+                            }
+                            $('#friday').append(f);
+                        } else if (results2.features[i].attributes["Time"] == "Ongoing" || results2.features[i].attributes["Time"] == "Various times") { //this statement was created to address flaws in the data, if a more consistant data structure is used in the future, this should be modified.
+                            for (att in featureAttributes) {
+                                if (att != "Day") {
+                                    if (u < 1) {
+                                        f = "<li>" + featureAttributes[att] + " "; //this code assumes that ongoing events occur both days
+                                        s = "<li>" + featureAttributes[att] + " ";
+                                        u++;
+                                    } else {
+                                        f = f + featureAttributes[att] + "</li>"; //this code assumes that ongoing events occur both days
+                                        s = s + featureAttributes[att] + "</li>";
+                                        u = 0;
+                                    }
+                                }
+                            }
+                            $('#friday').append(f);
+                            $('#saturday').append(s);
+                        } else { //the Saturday events hit this statement
+                            var s = "";
+                            for (att in featureAttributes) {
+                                if (att != "Day") {
+                                    if (u < 1) {
+                                        s = s + "<li>" + featureAttributes[att] + " "; //append time
+                                        u++
+                                    } else {
+                                        s = s + featureAttributes[att] + "</li>"; //append event
+                                        u = 0;
+                                    }
+                                }
+                            }
+                            $('#saturday').append(s);
+                        }
+                    }
+                    if (f == "") {
+                        f = "<li>No events</li>";
+                        $('#friday').append(f);
+                    }
+                    if (s == "") {
+                        s = "<li>No events</li>";
+                        $('#saturday').append(s);
+                    }
+                    $('#friday').listview(); //calling .listview()
+                    $('#friday').listview('refresh');
+                    $('#saturday').listview();
+                    $('#saturday').listview('refresh');
+                }
+
+                function showResults3(results3) {
+                    var b = "";
+                    $('#artist').append("<li data-role='list-divider'>Art on display</li>");
+                    for (var i = 0, il = results3.features.length; i < il; i++) { //iterate through all of the events
+                        var featureAttributes = results3.features[i].attributes;
+                        $('#artist').append("<li><a href='artist.html?ID=" + featureAttributes["ID"] + "&Artist=" + featureAttributes["Artist"] + "' data-role='button' data-ajax='false'>" + featureAttributes["Artist"] + "</a></li>");
+                    }
+                    $('#artist').listview();
+                    $('#artist').listview('refresh');
+                }
+				dojo.addOnLoad(init);
+            </script>
+            <div data-role="header" data-theme="b" data-add-back-btn="true">
+                <h1>
+                    <div id="title" align="center"></div>
+                </h1>
+				<a href="index.html" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+                <a href="index.html" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+            </div>
+            <!-- /header -->
+            <div data-role="content">
+                <div id="onmap"></div>
+                <div id="website"></div>
+                <br />
+                <ul data-role="listview" id="artist" data-divider-theme="b"></ul>
+                <br />
+                <ul data-role="listview" id="friday" data-divider-theme="b"></ul>
+                <br />
+                <ul data-role="listview" id="saturday" data-divider-theme="b"></ul>
+            </div>
+            <!-- /content -->
+        </div>
+        <!-- /page -->
+    </body>
+
+</html>

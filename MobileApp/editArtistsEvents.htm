@@ -1,0 +1,350 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <title>Edit Records</title>
+
+  <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.1/js/dojo/dijit/themes/soria/soria.css">
+  <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.1/js/dojo/dojox/grid/resources/Grid.css">
+  <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.1/js/dojo/dojox/grid/resources/soriaGrid.css">
+  <link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.1/js/dojo/dojox/widget/Toaster/Toaster.css">
+  <style type="text/css">
+    .soria .dojoxGridRowOver .dojoxGridCell { color:#000000; }
+  </style>
+
+    <script type="text/javascript">
+      djConfig = {
+        parseOnLoad:true
+      };
+    </script>
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1"></script>
+
+  <script type="text/javascript">
+    dojo.require("esri.map");
+    dojo.require("esri.layers.FeatureLayer");
+    dojo.require("dojo.data.ItemFileWriteStore");
+    dojo.require("dojox.grid.DataGrid");
+    dojo.require("dijit.form.Button");
+    dojo.require("dojox.widget.Toaster");
+    dojo.require("dojox.grid.cells.dijit");
+    
+    var featureLayer, pageInfo, grid, toaster;
+    
+    // grid structure
+    var layout = {
+      cells: [
+        //{ field: "DTGReport",           name: "DTG Report",           editable: true },
+        //{ field: "Title",     name: "thead",     editable: true },
+        //{ field: "Description",     name: "Description",      editable: true },
+        //{ field: "RepAgency", name: "Reporting Agency", editable: true },
+        //{ field: "WhoEvent",      name: "Event People",      editable: true },
+        //{ field: "WhatEvent",    name: "Event Info",    editable: true },
+        //{ field: "WhenEvent",         name: "Event Date",         editable: true },
+        { field: "LASTNAME",       name: "LASTNAME",       editable: true },
+        { field: "FIRSTNAME",     name: "FIRSTNAME",      editable: true },
+        { field: "ID", name: "ID", editable: true },
+        { field: "__Fall_2012",      name: "__Fall_2012",      editable: true },
+        { field: "__Performer_Fall_2012",    name: "__Performer_Fall_2012",    editable: true },
+        { field: "Artist",         name: "Artist",         editable: true }
+      ]
+    };
+
+    // Get object IDs from the table after the page is loaded
+    dojo.addOnLoad(getObjectIds);
+
+    function getObjectIds() {
+      esri.config.defaults.io.proxyUrl = "/proxy/proxy.ashx";
+      grid = dijit.byId("myGrid");
+      toaster = dijit.byId("infoToaster");
+      
+      featureLayer = new esri.layers.FeatureLayer("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/1", {
+        outFields: [ "*" ]
+      });
+
+      dojo.connect(featureLayer, "onLoad", function() {
+        // let's create the grid layout
+        updateGridLayout(layout);
+        grid.attr("structure", layout);
+        grid.attr("autoWidth", true);
+        
+        // apply the final edit (if any) when the user  
+        // clicks away from the grid
+        dojo.connect(grid, "onBlur", function() { grid.edit.apply(); });
+  
+        // create the query to fetch object IDs for all records
+        var query = new esri.tasks.Query();
+        query.where = "1=1";
+        
+        featureLayer.queryIds(query, function(objectIds) {
+          fetchRecords(objectIds);
+        });
+      });
+    }
+    
+    function updateGridLayout(layout) {
+      var cells = layout.cells, fields = featureLayer.fields;
+      
+      // find if a field has a domain associated
+      // with it. If so, set the cell type to
+      // ComboBox and set its options
+      dojo.forEach(cells, function(cell) {
+        var fieldId = cell.field, domain = null;
+        
+        for (var i = 0; i < fields.length; i++) {
+          var field = fields[i];
+          if (field.name === fieldId && field.domain && field.domain.type === "codedValue") {
+            domain = field.domain;
+            break;
+          }
+        }
+        
+        if (domain) {
+          cell.type = dojox.grid.cells.Select;
+          cell.options = dojo.map(domain.codedValues, function(value) {
+            return value.name; // text (label) for each item
+          });
+          cell.values = dojo.map(domain.codedValues, function(value) {
+            return value.code; // value for each item
+          });
+          cell.formatter = formatter;
+          cell.constraint = { domain: domain };
+        }
+      });
+    }
+    
+    function formatter(code) {
+      //console.log("[ FORMATTER ]", arguments, this.field);
+      var val = code;
+      var codedValues = this.constraint.domain.codedValues;
+      for (var i = 0; i < codedValues.length; i++) {
+        var value = codedValues[i];
+        if (value.code == code) {
+          val = value.name;
+          break;
+        }
+      }
+      return val;
+    }
+    
+    function fetchRecords(objectIds) {
+      if (objectIds.length > 0) {
+        updatePageInformation(objectIds);
+        queryRecordsByPage(1);
+      }
+      else {
+        grid.showMessage("No matching records");
+        grid.setStore(null);
+      }
+    }
+    
+    function updatePageInformation(objectIds, page) {
+      pageInfo = {
+        objectIds: objectIds,
+        totalRecords: objectIds.length,
+        totalPages: Math.ceil(objectIds.length / 15),
+        currentPage: page || 0, 
+        recordsPerPage: 15
+      };
+      
+      dojo.byId("pageInfo").innerHTML = pageInfo.currentPage + "/" + pageInfo.totalPages;
+      dojo.byId("recordsInfo").innerHTML = pageInfo.totalRecords;
+      
+      if (pageInfo.currentPage > pageInfo.totalPages) {
+        queryRecordsByPage(pageInfo.currentPage - 1);
+      }
+    }
+    
+    function queryRecordsByPage(pageNumber) {
+      
+      // check if the page number is valid
+      if (pageNumber < 1 || pageNumber > pageInfo.totalPages) {
+        return;
+      }
+
+      grid.showMessage("Fetching records...");
+      
+      var begin = pageInfo.recordsPerPage * (pageNumber - 1);
+      var end = begin + pageInfo.recordsPerPage;
+      
+      // create the query
+      var query = new esri.tasks.Query();
+      query.objectIds = pageInfo.objectIds.slice(begin, end);
+      query.outFields = [ "*" ];
+      
+      // Query for the records with the given object IDs and populate the grid
+      featureLayer.queryFeatures(query, function(featureSet) {
+        updateGrid(featureSet, pageNumber);
+      });
+    }
+    
+    function updateGrid(featureSet, pageNumber) {
+      
+      // create the data store and add it to the grid        
+      var items = [];
+      dojo.forEach(featureSet.features, function(feature) {
+        items.push(feature.attributes);
+      });
+      
+      var store = new dojo.data.ItemFileWriteStore({ data: { items: items } });
+      dojo.connect(store, "onSet", cellUpdated);
+      grid.setStore(store);
+      grid.update();
+      
+      // update application state
+      pageInfo.currentPage = pageNumber;
+      dojo.byId("pageInfo").innerHTML = pageInfo.currentPage + "/" + pageInfo.totalPages;
+    }
+    
+    /*********
+     * Update
+     *********/
+    
+    function cellUpdated(storeItem, attribute, oldValue, newValue) {
+      if (attribute === "OBJECTID" || oldValue == newValue) {
+        return;
+      }
+      
+      var feature = new esri.Graphic();
+      feature.setAttributes(getItemAttributes(storeItem));
+      
+      featureLayer.applyEdits(null, [ feature ], null, function(a, updateResults, b) {
+        
+        var result = updateResults[0];
+        if (result.success) {
+          toaster.setContent("Updated record with object id  " + result.objectId);
+          toaster.show();
+        }
+      });
+    }
+    
+    /*********
+     * Delete 
+     *********/
+    
+    function deleteSelection() {
+      var storeItems = grid.selection.getSelected(), deletedFeatures = [], itemBag = {};
+      
+      dojo.forEach(storeItems, function(item) {
+        var feature = new esri.Graphic();
+        feature.setAttributes(getItemAttributes(item));
+        deletedFeatures.push(feature);
+        itemBag[grid.store.getValue(item, "OBJECTID")] = item;
+      });
+
+      featureLayer.applyEdits(null, null, deletedFeatures, function(a, b, deleteResults) {
+        
+        if (deleteResults && deleteResults.length > 0) {
+          dojo.forEach(deleteResults, function(result) {
+            if (result.success) {
+              // delete the item correspondign to this object id from the data store
+              grid.store.deleteItem(itemBag[result.objectId]);
+              
+              // update application state
+              pageInfo.objectIds.splice(dojo.indexOf(pageInfo.objectIds, result.objectId), 1);
+              updatePageInformation(pageInfo.objectIds, pageInfo.currentPage);
+              
+              toaster.setContent("Deleted object id " + result.objectId);
+              toaster.show();
+            }
+          });
+  
+          grid.selection.clear();
+        }
+      });
+    }
+    
+    /******
+     * Add 
+     ******/
+    
+    function add() {
+      // create a new record using the template
+      // published with the feature layer. The user
+      // can further modify the attributes
+      var attributeTemplate = dojo.mixin({}, featureLayer.templates[0].prototype.attributes);
+      var newItem = grid.store.newItem(attributeTemplate);
+      
+      // select this new record and scroll it to view
+      var rowIndex = grid.getItemIndex(newItem);
+      grid.scrollToRow(rowIndex);
+      grid.selection.select(rowIndex);
+
+      //var feature = new esri.Graphic();
+      var feature = {};
+      //feature.setAttributes(getItemAttributes(newItem));
+      feature.attributes = (getItemAttributes(newItem));
+      
+      
+      featureLayer.applyEdits([ feature ], null, null, function(addResults, a, b) {
+        
+        var result = addResults[0];
+        if (result.success) {
+          // Assign the object id returned by the server for this new record 
+          var lastAddedItem = grid.getItem(grid.rowCount - 1);
+          grid.store.setValue(lastAddedItem, "OBJECTID", result.objectId);
+
+          // update application state            
+          pageInfo.objectIds.push(result.objectId);
+          updatePageInformation(pageInfo.objectIds, pageInfo.currentPage);
+          
+          toaster.setContent("Added a new row with object id " + result.objectId);
+          toaster.show();
+        }
+      });
+    }
+    
+    function getItemAttributes(storeItem) {
+      var store = grid.store, attributes = store.getAttributes(storeItem), attr = {};
+      
+      dojo.forEach(attributes, function(fieldName) {
+        attr[fieldName] = store.getValue(storeItem, fieldName);
+      });
+      
+      return attr;
+    }
+    
+  </script>
+</head>
+
+<body class="soria">
+    
+  <p>
+    &nbsp;&nbsp;Total records = <span id="recordsInfo">0</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+
+    <button dojoType="dijit.form.Button" onclick="queryRecordsByPage(pageInfo.currentPage - 1);">
+      Prev Page</button>
+           
+    &nbsp;&nbsp<span id="pageInfo"></span>&nbsp;&nbsp
+    
+    <button dojoType="dijit.form.Button" onclick="queryRecordsByPage(pageInfo.currentPage + 1);">
+      Next Page</button>
+      
+    &nbsp;&nbsp Click on a record to modify its attributes.
+  </p>
+
+  
+  <!-- Grid to show records -->
+  <table id="myGrid" dojoType="dojox.grid.DataGrid" rowsPerPage="15" 
+         singleClickEdit="true" style= "width: 725px; height: 450px; border: solid 1px #000;">
+  </table>
+
+  <p>
+    &nbsp;&nbsp;
+    <button dojoType="dijit.form.Button" onclick="add();">
+      Add</button>
+      
+    &nbsp;&nbsp;
+
+    <button dojoType="dijit.form.Button" onclick="deleteSelection();">
+      Delete</button>
+  </p>
+
+  <!-- Toaster widget to show feedback to the user -->
+  <div dojoType="dojox.widget.Toaster" id="infoToaster" positionDirection="tr-down"
+       duration="3000" style="font-weight: bold; font-size: 150%;">
+  </div>
+
+</body>
+</html>

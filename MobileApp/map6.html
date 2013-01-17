@@ -1,0 +1,416 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=7,IE=9" />
+  <!--The viewport meta tag is used to improve the presentation and behavior
+  of the samples on iOS devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <title>Olympia Arts Walk</title>
+  <link rel="stylesheet" href="themes/Olympia.min.css"/>
+  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css"/>
+  <style type="text/css">
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    @-webkit-keyframes pulse {
+      0% {
+      }
+      45% {
+        opacity: .60;
+      }
+      100% {
+        opacity: 1.0;
+      }
+    }
+
+    #map_graphics_layer {
+      -webkit-animation-duration: 3s;
+      -webkit-animation-iteration-count: infinite;
+      -webkit-animation-name: pulse;
+      -webkit-animation-timing-function: ease-in-out;
+    }
+
+   .page-map, #mapcontent, #map, #map_root {
+            height: 100%;
+            padding: 0;
+            margin:0;
+        }
+
+.map{
+  overflow:visible !important;
+}
+
+
+    .ui-bar-f {
+      border: 1px solid #005502;
+      background: #9d3f25;
+      color: #fff;
+      text-shadow: 0 1px 0 #fff;
+      background-image: -moz-linear-gradient(top, #92542c, #9d3f25);
+      background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #92542c), color-stop(1, #9d3f25));
+      -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorStr='#92542c', EndColorStr='#9d3f25')";
+      .right {
+        float: right;
+        display: inline;
+      }
+      .left {
+        float: left;
+        display: inline;
+      }
+    }
+  </style>
+  <script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+  <script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+  <script src="images64.js"></script> <!--this code loads the base 64 bit encoded images, the images load slightly faster using this method-->
+    <!-- ArcGIS API for JavaScript -->
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script>
+    <script type="text/javascript">
+      $.mobile.ajaxEnabled = true;
+    </script>
+    <script type="text/javascript">
+      //initialize dojo
+      dojo.require("esri.map");
+      dojo.require("esri.layers.FeatureLayer");
+      dojo.require("dojo.parser");
+      dojo.require("esri.tasks.query")
+
+      dojo.require("esri.arcgis.utils");
+      dojo.require("esri.graphic");
+
+
+      dojo.addOnLoad(init);
+
+      var map;
+      var artsWalk;
+      var selectionLayer;
+      var template;
+
+      function init() {
+
+        //onorientationchange doesn't always fire in a timely manner in Android so check for both orientationchange and resize 
+        var supportsOrientationChange = "onorientationchange" in window,
+          orientationEvent = supportsOrientationChange ? "orientationchange" : "resize";
+        window.addEventListener(orientationEvent, function () {
+          orientationChanged();
+        }, false);
+		//grabs the url so that a specific point can be located using the ID
+        var url = dojo.doc.location.href;
+        var urlParam = esri.urlToObject(url);
+        var ID = ''; 
+
+        if (urlParam.query && urlParam .query.ID != false) {
+          //get business location 
+          ID = urlParam.query.ID; //Pass in the ID of the businesses chosen by the user. This allows it to appear highlighted on the map.
+            initMap(ID);
+        } else {
+          //get the current location
+          if (navigator.geolocation) {
+            $.mobile.showPageLoadingMsg();
+			//this uses the HTML 5 geolocation API
+            navigator.geolocation.getCurrentPosition(initMap, locationError);
+            //navigator.geolocation.watchPosition(initMap, locationError);
+          }
+        }
+      }
+
+      function initMap(ID) {
+        //grab only the layers that can be rendered
+        var lods = [{
+          "level": 16,
+          "resolution": 2.388657133974685,
+          "scale": 9027.977411
+        }, {
+          "level": 17,
+          "resolution": 1.1943285668550503,
+          "scale": 4513.988705
+        }, {
+          "level": 18,
+          "resolution": 0.5971642835598172,
+          "scale": 2256.994353
+        }, {
+          "level": 19,
+          "resolution": 0.29858214164761665,
+          "scale": 1128.497176
+        }];
+
+
+        map = new esri.Map("map", {
+          lods: lods,
+		  extent: new esri.geometry.Extent(-13682050, 5948629, -13679940, 5950043, new esri.SpatialReference({ wkid: 102100 }))
+        });
+
+
+        dojo.connect(map, "onLoad", function () {
+		  zoomToLocation(ID);
+		  resizeMap();
+		  //hookup jquery
+		  $(document).ready(jQueryReady);
+        });
+        //add the world imagery from arcgis online
+        var basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://nwdemo1.esri.com/arcgis/rest/services/Olympia/Olympia_CM/MapServer");
+        map.addLayer(basemap);
+        //could add more to this template to display more info from feature 
+        var templateJson = {
+          title: "{Business}",
+          description:"{Artist}"
+
+        }
+        template = new esri.dijit.PopupTemplate(templateJson); //only used if a pop-up is desired
+
+
+        artsWalk = new esri.layers.FeatureLayer("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/0", {
+          "id":'artsWalkLayer',
+          mode: esri.layers.FeatureLayer.MODE_SNAPSHOT,
+          outFields: ["ID","Business","Address","Artist","BUSINESSES___See_Events_Fall_12","BUSINESSES___FRI_Perform_Fall_12","BUSINESSES___SAT_Perform_Fall_12"]
+        });
+		
+		dojo.connect(map, "onLoad", function() { //this code programatically symbolizes all of the businesses as well as highlighting the selected ones
+			var r = createRenderer('yellow');
+			artsWalk.setRenderer(r);
+
+			map.addLayer(artsWalk);
+
+			//add a graphics  layer to display selected features 
+			selectionLayer = new esri.layers.GraphicsLayer();
+			var selR = createRenderer('blue');
+			selectionLayer.setRenderer(selR);
+			map.addLayer(selectionLayer);
+		});
+
+        //listen for the arts walk layer's click event
+        dojo.connect(artsWalk,'onClick',function(evt){
+          viewVenues(evt.graphic);
+        });
+        //listen for the graphics layer click event 
+        dojo.connect(selectionLayer,'onClick',function(evt){
+          viewVenues(evt.graphic);
+        });
+
+        map.infoWindow.resize(200, 250);
+
+      }
+
+      function createRenderer(symbolColor){ //this function uses a renderer from the ArcGIS API to draw the symbols given certain parameters
+	  if (symbolColor == 'blue') {
+		  var uvrJson = {"type": "uniqueValue",
+			  "field1": "ID",
+			  "defaultSymbol": {
+			  
+				"url":symbolColor + '/' + symbolColor + '/' + symbolColor + '100.png', // "yellow/yellow/yellow100.png",
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+			  
+			  },
+			  "uniqueValueInfos": [{
+			  "value": "1",
+			  "symbol": {
+				"url":symbolColor+ '/' + symbolColor + '/' + symbolColor + '1.png', //"yellow/yellow/yellow1.png",
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+				}
+				}]
+			}
+		} else {
+			var uvrJson = {"type": "uniqueValue",
+			  "field1": "ID",
+			  "defaultSymbol": {
+			  
+				"url":symbolColor + '/' + symbolColor + '/' + symbolColor + '100.png', // "yellow/yellow/yellow100.png",
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+			  
+			  },
+			  "uniqueValueInfos": [{
+			  "value": "1",
+			  "symbol": {
+				"url":b64Array[0],
+				"height":20,
+				"width":20,
+				"type":"esriPMS"
+				}
+				}]
+			}
+		}
+        var renderer = new esri.renderer.UniqueValueRenderer(uvrJson);
+		if (symbolColor != 'blue') {
+			for (var i = 2; i < 126; i++) {
+			  renderer.addValue({
+				value: i,
+				symbol: {
+				  "url": b64Array[i-1], //the base 64 images are added here
+				  "height": 20,
+				  "width": 20,
+				  "type": "esriPMS"
+				}
+			  });
+			}
+		}
+		else {
+			for (var i = 2; i < 126; i++) {
+			  renderer.addValue({
+				value: i,
+				symbol: {
+				  "url": symbolColor + '/' + symbolColor + '/' + symbolColor + i + '.png', //"yellow/yellow/yellow" + i + ".png",
+				  "height": 20,
+				  "width": 20,
+				  "type": "esriPMS"
+				}
+			  });
+			}
+		}
+        return renderer;
+
+      }
+	  
+      function pointToExtent(map, point, toleranceInPixel) {
+        var pixelWidth = map.extent.getWidth() / map.width;
+        var toleraceInMapCoords = toleranceInPixel * pixelWidth;
+        return new esri.geometry.Extent(point.x - toleraceInMapCoords,
+        point.y - toleraceInMapCoords,
+        point.x + toleraceInMapCoords,
+        point.y + toleraceInMapCoords,
+        map.spatialReference);
+      }
+
+
+      function viewVenues(graphic){
+		  var content = "venue4.html?ID=" + graphic.attributes.ID;
+		window.location.href = content;
+           
+      }
+
+      function locationError(error) {
+        switch (error.code) {
+        case error.PERMISSION_DENIED:
+          console.log("Location not provided");
+		  initMap(0);
+		  break;
+        case error.POSITION_UNAVAILABLE:
+          console.log("Current location not available");
+          break;
+        case error.TIMEOUT:
+          console.log("Timeout");
+          break;
+        default:
+          console.log("unknown error");
+          break;
+        }
+      }
+
+      function zoomToLocation(features) {
+
+       $.mobile.hidePageLoadingMsg(); //true hides the dialog
+        var points = [];
+          if(features.coords){
+            //results of geolocation find location 
+            myLocation(features);
+		  }else{
+            //url parameter with one or more id 
+              var query = new esri.tasks.Query();
+              query.where=('ID in (' + features + ')' );
+             // query.objectIds = [features];
+             //selectionLayer.clear();
+              artsWalk.queryFeatures(query,function(featureSet){
+                dojo.forEach(featureSet.features,function(feature){
+                   //add the selected features to the selection layer 
+                   selectionLayer.add(feature);
+                });
+                  //zoom to extent of all graphics 
+                  if(featureSet.features.length === 1){
+                    //only one so centerAt
+                    //map.centerAt(featureSet.features[0].geometry);
+					map.centerAndZoom(featureSet.features[0].geometry, 1);
+                  }else{
+                    var extent = esri.graphicsExtent(featureSet.features);
+                    map.setExtent(extent); //This doesn't seem to set the scale properly.
+                  }
+              });
+        }
+
+      }
+
+      function jQueryReady() {
+        $('#mapPage').bind('pageshow', function (event, ui) {
+          resizeMap();
+        });
+      }
+
+      function showLocation() {
+        if (navigator.geolocation) {
+          $.mobile.showPageLoadingMsg();
+          navigator.geolocation.getCurrentPosition(myLocation, locationError);
+        }
+      }
+
+      function myLocation(location) {
+        $.mobile.hidePageLoadingMsg(); //true hides the dialog
+        //check location
+        var pt;
+        if (location.spatialReference && location.spatialReference.wkid === 102100) {
+          pt = location;
+        } else {
+         pt = esri.geometry.geographicToWebMercator(new esri.geometry.Point(location.coords.longitude, location.coords.latitude));
+        }
+		map.graphics.clear();
+        var symbol = new esri.symbol.PictureMarkerSymbol("here.png", 35, 35);
+        map.graphics.add(new esri.Graphic(pt, symbol));
+        map.centerAndZoom(pt,1);
+      }
+
+      function orientationChanged() {
+        if (map) {
+          resizeMap();
+        }
+      }
+
+      function resizeMap() {
+        if (map) {
+          //get header height and subtract from screen height
+          var ht = screen.height -dojo.position(dojo.byId('header')).h;
+
+         $('#map').css("height",ht );
+         $('#map').css("width", "auto");
+          map.reposition();
+          map.resize();
+        }
+      }
+
+      function updateLayerVisibility() {
+        //toggle layer visibility 
+        var inputs = dojo.query(".custom");
+        //hide selection layer and venue layer 
+        if(inputs[0].checked){
+          artsWalk.show();
+          selectionLayer.show();
+        }else{
+          artsWalk.hide();
+          selectionLayer.hide();
+        }
+
+
+      }
+    </script>
+  </head>
+  <body>
+  <div data-role="page" id='mapPage' style="width:100%;height:100%;overflow:hidden;" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+        <div id="header" data-role="header" data-theme='b'>
+            <h1>Olympia Arts Walk</h1>
+			<a href="index.html" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+			<a href="index.html" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+			<a onclick='showLocation()' id='geolocation' style='right: 40px; float: right; position: absolute; display: inline;' data-theme='b' data-transition='fade' data-ajax='false' data-icon='geolocation' data-iconpos='notext' data-inline="true"></a>
+      </div>
+    
+     <div data-role="content" id="mapcontent" data-theme='d'>
+            <div id="map">
+            <div style="right: 0%; position: absolute; float: right; z-index: 5000;">
+                <input type="checkbox" data-inline="true" checked="checked" name="checkbox-1" id="custom" class="custom" data-theme='b'  data-mini="true" onclick="updateLayerVisibility();"/>
+				<label for="custom">Venues</label>
+            </div>
+          </div>
+        </div>
+</div>
+</body>
+</html>

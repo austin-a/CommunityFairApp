@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>Olympia Arts Walk</title>
+	<link rel="stylesheet" href="themes/Olympia.min.css" />
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css" />
+	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+	<script type="text/javascript">var djConfig = {parseOnLoad: true};</script> 
+	<script type="text/javascript">$.mobile.pushStateEnabled = false;</script>
+	<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script>
+</head> 
+
+<body> 
+
+<div data-role="page" id="default" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	
+	<style type="text/css">
+		.right {float: right; display: inline;}
+		.left {float: left; display: inline;}
+		h4 {text-align: center;} <!--this was added to the stylesheet because the jQuery mobile stylesheet was clipping the page title in the header.-->
+	</style>
+	
+	<div data-role="header" data-theme="b">
+		<div>
+			<h4>Olympia Arts Walk</h4>
+		</div>
+	</div><!-- /header -->
+
+	<div data-role="content" data-theme="d">	
+		Welcome! This app will function as your virtual guide while you visit Arts Walk. You can find businesses, artists, and events using the buttons below.
+		<a href="searchvenue.html" data-role="button" data-icon="search" data-theme="b">Search by venue</a>
+		<a href="searchartist.html" data-role="button" data-icon="search" data-theme="b">Search artists and events</a>
+		<a href="map6.html" data-role="button" data-icon="star" data-theme="b" data-prefetch rel=external>Find on map</a> <!--rel=external was added here to disable the Ajax transitions which have a tendency to mess up pages with dynamic content-->
+		<a href="friday2.html" data-role="button" data-icon="info" data-theme="b" rel=external>Event schedule</a>
+		<a href="rightnow.html" data-role="button" data-icon="check" data-theme="b" rel=external>Happening now</a>
+	</div><!-- /content -->
+	
+	<div data-role="footer" class="footer-docs" data-theme="d">
+			<!--<div class="left"><a href="bugs.html" data-role="button" data-mini="true" data-inline="true" data-theme="b" data-transition="fade">Report bug</a></div> The remenents of the bug reporter page-->
+			<div class="right"><a href="about.html" data-role="button" data-mini="true" data-inline="true" data-rel="dialog" data-ajax="true" data-transition="pop" data-theme="b">About</a></div>
+		</div>
+	</div><!-- /footer -->
+	
+</div><!-- /page -->
+
+</body>
+</html>

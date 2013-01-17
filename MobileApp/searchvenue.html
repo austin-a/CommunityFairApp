@@ -1,0 +1,85 @@
+<!DOCTYPE html> 
+<html>
+<head>
+	<meta charset="utf-8" /> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>Olympia Arts Walk</title> 
+	<link rel="stylesheet" href="themes/Olympia.min.css" />
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css" />
+	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+	<script type="text/javascript">var djConfig = {parseOnLoad: true};$.mobile.ajaxEnabled = true;</script> 
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script>
+</head> 
+<body> 
+
+<div data-role="page" class="type-interior" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+
+ 
+    <script type="text/javascript">
+      dojo.require("esri.arcgis.utils");
+	  dojo.require("esri.tasks.query");
+      
+     var queryTask, query;
+
+      function init() {
+        //build query
+        queryTask = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/0");
+
+        //build query filter
+        query = new esri.tasks.Query();
+        query.returnGeometry = false;
+        query.outFields = ["Business, ID"];
+		query.orderByFields = ["Business"];
+		console.log(dojo.doc.location);
+		//var urlObject = esri.urlToObject(dojo.doc.location.href);
+
+		//query.where = "ID = " + urlObject.query.ID;
+		query.where = "1=1"; //1 always equals 1, so all of the records will be displayed
+		queryTask.execute(query,showResults);
+      }
+
+      function execute(stateName) {
+        query.text = stateName;
+		//execute query
+        queryTask.execute(query,showResults);
+	  }
+		
+	  function showResults(results) {
+        var s = "";
+		var f = "";
+		var u = 0;
+		for (var i=0, il=results.features.length; i<il; i++) {		//iterate through all of the venues
+		  var featureAttributes = results.features[i].attributes;
+		  var count = 0;
+		  for (att in featureAttributes) {
+			count++;
+		  }
+		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the business field and the ID field, but we only want one listing for each business
+				$('#myList').append('<li><a href="venue4.html?ID=' + featureAttributes["ID"] + '" data-ajax="false">' + featureAttributes["Business"] + '</a></li>'); //this link passes the business id into the next page
+			  }
+		}
+		$('#myList').listview();
+		$('#myList').listview('refresh'); //the refresh call is nesecarry for dynamic lists so that jquery proper styles the links.
+	  }
+	  dojo.addOnLoad(init);
+</script>
+
+<div data-role="header" data-theme="b">
+<h1>Search Venues</h1>
+<a href="index.html" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+<a href="index.html" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+</div><!-- /header -->
+
+<div data-role="content" data-theme="b">
+<div class="content-primary">	
+	<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search venues..." data-filter-theme="b"data-theme="d" data-divider-theme="b"> <!--the list content is loaded into this tag dynamically-->
+	</ul>
+	</div><!--/content-primary -->
+
+</div><!-- /content -->
+
+</div><!-- /page -->
+
+</body>
+</html>

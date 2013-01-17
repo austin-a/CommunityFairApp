@@ -1,0 +1,89 @@
+<!DOCTYPE html> 
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>Olympia Arts Walk</title> 
+	<link rel="stylesheet" href="themes/Olympia.min.css" />
+<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css" />
+<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+	<script type="text/javascript">var djConfig = {parseOnLoad: true};$.mobile.ajaxEnabled = false;</script> 
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script> 
+</head> 
+
+<body> 
+
+<div data-role="page" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+    <script type="text/javascript"> 
+      dojo.require("dijit.layout.BorderContainer");
+      dojo.require("dijit.layout.ContentPane");
+      dojo.require("dijit.layout.TabContainer");
+      dojo.require("esri.map");
+      dojo.require("esri.dijit.Legend");
+      dojo.require("esri.arcgis.utils");
+	  dojo.require("esri.tasks.query");
+      
+     var queryTask, query;
+	 var url = dojo.doc.location.href;
+
+      function init() {
+        //build query
+        queryTask1 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/0"); //one query task is used for the businesses
+		queryTask2 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/1"); //the other for the artist table
+        //dojo.connect(queryTask, "onComplete", showResults);
+
+        //build query filter1
+        query1 = new esri.tasks.Query();
+        query1.returnGeometry = false;
+        query1.outFields = ["Business", "ID"];
+		query1.orderByFields = ["Business"];
+		console.log(url);
+		var urlObject1 = esri.urlToObject(url);
+
+		query1.where = "ID = " + urlObject1.query.ID; //only the artist whose venue ID is passed in throught the URL will be displayed
+		queryTask1.execute(query1,showResults1);
+		
+		//build query filter2
+        query2 = new esri.tasks.Query();
+        query2.returnGeometry = false;
+        query2.outFields = ["Artist"];
+		query2.orderByFields = ["Artist"];
+		console.log(dojo.doc.location);
+		var urlObject2 = esri.urlToObject(url);
+
+		query2.where = "ID = " + urlObject2.query.ID; //only the artist whose venue ID is passed in throught the URL will be displayed
+		queryTask2.execute(query2,showResults2);
+      }
+	  
+	  function showResults1(results1) {
+		var b = "<a href='venue4.html?ID=" + results1.features[0].attributes["ID"] + "&business=" + results1.features[0].attributes["Business"] + "' data-role='button' data-theme='b' rel=external>" + results1.features[0].attributes["Business"] + "</a>"; //this code passes the business name as well as the ID
+		$('#location').append(b).trigger('create');
+		$('#onmap').append('<a href="map6.html?ID=' + results1.features[0].attributes["ID"] + '" data-role="button" data-theme="b" rel=external>Map</a>').trigger('create');
+		}
+		
+	function showResults2(results2) {
+        var a = esri.urlToObject(dojo.doc.location.href).query.Artist; //the name of the artist is passed in through the URL because the artists do not have a unique ID of their own, they only have the ID of the business they are performing at.
+		dojo.byId("title").innerHTML = a;
+	}
+	  dojo.addOnLoad(init);
+</script>
+	<div data-role="header" data-theme="b" data-add-back-btn="true">
+		<h1><div id="title" align="center"></div></h1>
+		<a href="index.html" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="index.html" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+	</div><!-- /header -->
+
+	<div data-role="content">	
+		<div class="ui-bar ui-bar-c" align="center"> <!--one of jquery's divider bars was used here-->
+			<h3>Presenting at:</h3>
+		</div>
+		<div id="location"></div>
+		<div id="onmap"></div>
+	</div><!-- /content -->
+	
+</div><!-- /page -->
+
+</body>
+</html>

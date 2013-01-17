@@ -1,0 +1,112 @@
+<!DOCTYPE html> 
+<html>
+<head>
+	<meta charset="utf-8" /> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>Olympia Arts Walk</title> 
+	<link rel="stylesheet" href="themes/Olympia.min.css" />
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.1/jquery.mobile.structure-1.1.1.min.css" />
+	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+	<script type="text/javascript">var djConfig = {parseOnLoad: true};</script> 
+    <script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.1compact"></script>
+</head> 
+<body> 
+
+<div data-role="page" class="type-interior" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+
+ 
+    <script type="text/javascript"> 
+      dojo.require("dijit.layout.BorderContainer");
+      dojo.require("dijit.layout.ContentPane");
+      dojo.require("dijit.layout.TabContainer");
+      dojo.require("esri.map");
+      dojo.require("esri.dijit.Legend");
+      dojo.require("esri.arcgis.utils");
+	  dojo.require("esri.tasks.query");
+      
+     var queryTask, query;
+
+      function init() {
+        //build query
+        queryTask1 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/1"); //one query task is needed for each data table
+		queryTask2 = new esri.tasks.QueryTask("http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/2");
+        //dojo.connect(queryTask, "onComplete", showResults);
+
+        //build query filter, artist table
+        query1 = new esri.tasks.Query();
+        query1.returnGeometry = false;
+        query1.outFields = ["Artist, ID"];
+		query1.orderByFields = ["Artist"];
+		console.log(dojo.doc.location);
+
+		query1.where = "1=1"; //query all of the records
+		queryTask1.execute(query1,showResults1);
+		
+		//build query filter2, events table
+        query2 = new esri.tasks.Query();
+        query2.returnGeometry = false;
+        query2.outFields = ["Event, ID"];
+		query2.orderByFields = ["Event"];
+		console.log(dojo.doc.location);
+		//var urlObject2 = esri.urlToObject(url);
+		
+		query2.where = "1=1"; //query all of the records
+		queryTask2.execute(query2,showResults2);
+      }
+		
+	  function showResults1(results1) {
+        var s = "";
+		var f = "";
+		var u = 0;
+		$('#myList').append('<li data-role="list-divider" data-theme="b">Artists</li>');
+		for (var i=0, il=results1.features.length; i<il; i++) { //iterate through all of the records
+		  var featureAttributes = results1.features[i].attributes;
+		  var count = 0;
+		  for (att in featureAttributes) {
+			count++;
+		  }
+		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the business field and the ID field, but we only want one listing for each business
+				$('#myList').append('<li><a href="artist.html?ID=' + featureAttributes["ID"] + '&Artist=' + featureAttributes["Artist"] + '" data-ajax="false">' + featureAttributes["Artist"] + '</a></li>');
+			  }
+		}
+		$('#myList').listview(); //.listview() is needed for jquery to style the new dynamic content
+		$('#myList').listview('refresh');
+	  }
+	  
+	  function showResults2(results2) {
+		$('#myList').append('<li data-role="list-divider" data-theme="b">Events</li>');
+		for (var i=0, il=results2.features.length; i<il; i++) {
+			var featureAttributes = results2.features[i].attributes;
+			var count = 0;
+			for (att in featureAttributes) {
+				count++
+			}
+			for (var g=0, gl=count/2; g<gl; g++) {
+				$('#myList').append('<li><a href="venue4.html?ID=' + featureAttributes["ID"] + '" data-ajax="false">' + featureAttributes["Event"] + '</a></li>');
+			}
+		}
+		$('#myList').listview();
+		$('#myList').listview('refresh');
+	  }
+	  dojo.addOnLoad(init);
+</script>
+
+<div data-role="header" data-theme="b">
+<h1>Search Artists/Events</h1>
+<a href="index.html" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+<a href="index.html" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+</div><!-- /header -->
+
+<div data-role="content">
+<div class="content-primary">	
+	<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search artists..." data-filter-theme="b"data-theme="d" data-divider-theme="b"> <!--the list items are programatically added to this tag-->
+	</ul>
+	</div><!--/content-primary -->
+
+</div><!-- /content -->
+
+</div><!-- /page -->
+
+</body>
+</html>
