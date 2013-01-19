@@ -1300,22 +1300,22 @@
 		</head>
 <body>
 
-<div data-role="page" id="index" data-theme="d">
-	<div data-role="header" data-theme="b">
+<div data-role="page" id="index" data-theme="a">
+	<div data-role="header" data-theme="a">
 		<div>
 			<h4 id="appTitle"></h4>
 		</div>
 	</div>
-	<div data-role="content" data-theme="d">
+	<div data-role="content" data-theme="a">
 		<div id="introText"></div>
-        <a href="#rightnow" id="nowbtn" data-role="button" data-icon="check" data-theme="b" data-transition="slide" class="ui-disabled">Happening now</a>		
-        <a href="#mapPage" id="mapbtn" data-role="button" data-icon="star" data-theme="b" data-transition="pop" class="mapPage ui-disabled">Find on map</a>
-		<a href="#friday" id="schedulebtn" data-role="button" data-icon="info" data-theme="b" data-transition="slide" class="ui-disabled">Event schedule</a>
-        <a href="#searchvenue" id="venuebtn" data-role="button" data-icon="search" data-theme="b" data-transition="slide" class="ui-disabled">Search by venue</a>
-		<a href="#searchartist" id="artistbtn" data-role="button" data-icon="search" data-theme="b" data-transition="slide" class="ui-disabled">Search artists and events</a>
+        <a href="#rightnow" id="nowbtn" data-role="button" data-icon="check" data-theme="a" data-transition="slide" class="ui-disabled">Happening now</a>		
+        <a href="#mapPage" id="mapbtn" data-role="button" data-icon="star" data-theme="a" data-transition="pop" class="mapPage ui-disabled">Find on map</a>
+		<a href="#friday" id="schedulebtn" data-role="button" data-icon="info" data-theme="a" data-transition="slide" class="ui-disabled">Event schedule</a>
+        <a href="#searchvenue" id="venuebtn" data-role="button" data-icon="search" data-theme="a" data-transition="slide" class="ui-disabled">Search by venue</a>
+		<a href="#searchartist" id="artistbtn" data-role="button" data-icon="search" data-theme="a" data-transition="slide" class="ui-disabled">Search artists and events</a>
 	</div>
-	<div data-role="footer" class="footer-docs" data-theme="d">
-		<div class="right"><a href="#about" data-role="button" data-mini="true" data-inline="true" data-rel="dialog" data-ajax="true" data-transition="pop" data-theme="b">About</a></div>
+	<div data-role="footer" class="footer-docs" data-theme="a">
+		<div class="right"><a href="#about" data-role="button" data-mini="true" data-inline="true" data-rel="dialog" data-ajax="true" data-transition="pop" data-theme="a">About</a></div>
 	</div>
 </div>
 
@@ -1328,119 +1328,119 @@
 	</div>
 </div>
 
-<div data-role="page" id="rightnow" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div data-role="header" data-theme="b">
+<div data-role="page" id="rightnow" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="a">
 		<h1>Happening Now</h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
-		<a href="#mapPage" style="right: 40px; float: right; top: 3px; position: absolute; display: inline;" data-theme="b" data-ajax="false" class="multiPass" data-inline="true">Map</a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#mapPage" style="right: 40px; float: right; top: 3px; position: absolute; display: inline;" data-theme="a" data-ajax="false" class="multiPass" data-inline="true">Map</a>
 	</div>
 	<div data-role="content">
-		<ul data-role="listview" id="now" data-divider-theme="b"></ul>
+		<ul data-role="listview" id="now" data-divider-theme="a"></ul>
 		<div id="empty"></div>
 	</div>
 </div>
 
-<div data-role="page" id="friday" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile. If you need to add page of events for a different day, copy this code and use it as a template.-->
-	<div data-role="header" data-theme="b">
+<div data-role="page" id="friday" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile. If you need to add page of events for a different day, copy this code and use it as a template.-->
+	<div data-role="header" data-theme="a">
 		<h1>Event Schedule</h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
 	<div data-role="content">
 		<div data-role="controlgroup" data-type="horizontal" class="center-wrapper">
-			<a href="#friday" data-role="button" class="ui-btn-active" data-theme="b">Friday</a>
-			<a href="#saturday" data-role="button" data-theme="b">Saturday</a>
+			<a href="#friday" data-role="button" class="ui-btn-active" data-theme="a">Friday</a>
+			<a href="#saturday" data-role="button" data-theme="a">Saturday</a>
 		</div>
         <br/>
-		<ul data-role="listview" id="fridayEvents" data-divider-theme="b"></ul>
+		<ul data-role="listview" id="fridayEvents" data-divider-theme="a"></ul>
 	</div>	
 </div>
 
-<div data-role="page" id="saturday" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div data-role="header" data-theme="b" data-add-back-btn="true">
+<div data-role="page" id="saturday" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="a" data-add-back-btn="true">
 		<h1>Event Schedule</h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
 	<div data-role="content">
 		<div data-role="controlgroup" data-type="horizontal" class="center-wrapper">
-			<a href="#friday" data-role="button" data-theme="b">Friday</a>
-			<a href="#saturday" data-role="button" class="ui-btn-active" data-theme="b">Saturday</a>
+			<a href="#friday" data-role="button" data-theme="a">Friday</a>
+			<a href="#saturday" data-role="button" class="ui-btn-active" data-theme="a">Saturday</a>
 		</div>
         <br/>
-		<ul data-role="listview" id="saturdayEvents" data-divider-theme="b"></ul>
+		<ul data-role="listview" id="saturdayEvents" data-divider-theme="a"></ul>
 	</div>	
 </div>
 
-<div data-role="page" id='mapPage' style="width:100%;height:100%;overflow:hidden;" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div id="header" data-role="header" data-theme='b'>
+<div data-role="page" id='mapPage' style="width:100%;height:100%;overflow:hidden;" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div id="header" data-role="header" data-theme="a">
 		<h1 id="mapPageTitle"></h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="pop" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
-		<a onclick='showLocation()' id='geolocation' style='right: 40px; float: right; position: absolute; display: inline;' data-theme='b' data-transition='fade' data-ajax='false' data-icon='geolocation' data-iconpos='notext' data-inline="true"></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="pop" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a onclick='showLocation()' id='geolocation' style='right: 40px; float: right; position: absolute; display: inline;' data-theme="a" data-transition='fade' data-ajax='false' data-icon='geolocation' data-iconpos='notext' data-inline="true"></a>
 	</div>
-	<div data-role="content" id="mapcontent" data-theme='d' style="padding:0;width:100%;height:100%;">
+	<div data-role="content" id="mapcontent" data-theme="a" style="padding:0;width:100%;height:100%;">
 		<div id="map">
 			<div style="right: 0%; position: absolute; float: right; z-index: 5000;">
-				<input type="checkbox" data-inline="true" checked="checked" name="checkbox-1" id="custom" class="custom" data-theme='b'  data-mini="true" onclick="updateLayerVisibility();"/>
+				<input type="checkbox" data-inline="true" checked="checked" name="checkbox-1" id="custom" class="custom" data-theme="a"  data-mini="true" onclick="updateLayerVisibility();"/>
 				<label for="custom">Venues</label>
 			</div>
 		</div>
 	</div>
 </div>
 
-<div data-role="page" id="searchartist" class="type-interior" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div data-role="header" data-theme="b">
+<div data-role="page" id="searchartist" class="type-interior" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="a">
 		<h1>Search Artists/Events</h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
 	<div data-role="content">
 		<div class="content-primary">
-			<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search artists..." data-filter-theme="b"data-theme="d" data-divider-theme="b"></ul> <!--the list items are programatically added to this tag-->
+			<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search artists..." data-filter-theme="a"data-theme="a" data-divider-theme="b"></ul> <!--the list items are programatically added to this tag-->
 		</div>
 	</div>
 </div>
 
-<div data-role="page" id="searchvenue" class="type-interior" data-theme="b"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div data-role="header" data-theme="b">
+<div data-role="page" id="searchvenue" class="type-interior" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="a">
 		<h1>Search Venues</h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
-	<div data-role="content" data-theme="b">
+	<div data-role="content" data-theme="a">
 		<div class="content-primary">	
-			<ul data-role="listview" id="venueList" data-filter="true" data-filter-placeholder="Search venues..." data-filter-theme="b"data-theme="d" data-divider-theme="b"></ul> <!--the list content is loaded into this tag dynamically-->
+			<ul data-role="listview" id="venueList" data-filter="true" data-filter-placeholder="Search venues..." data-filter-theme="a"data-theme="a" data-divider-theme="b"></ul> <!--the list content is loaded into this tag dynamically-->
 		</div>
 	</div>
 </div>
 
-<div data-role="page" data-theme="d" id="venue"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div data-role="header" data-theme="b" data-add-back-btn="true">
+<div data-role="page" data-theme="a" id="venue"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="a" data-add-back-btn="true">
 		<h1>
 			<div id="title" align="center"></div>
 		</h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
 	<div data-role="content">
 		<div id="onmap"></div>
 		<!--<div id="website"></div>-->
 		<br />
-		<ul data-role="listview" id="artistVenue" data-divider-theme="b"></ul>
+		<ul data-role="listview" id="artistVenue" data-divider-theme="a"></ul>
 		<br />
-		<ul data-role="listview" id="fridayVenue" data-divider-theme="b"></ul>
+		<ul data-role="listview" id="fridayVenue" data-divider-theme="a"></ul>
 		<br />
-		<ul data-role="listview" id="saturdayVenue" data-divider-theme="b"></ul>
+		<ul data-role="listview" id="saturdayVenue" data-divider-theme="a"></ul>
 	</div>
 </div>
 
-<div data-role="page" id="artist" data-theme="d"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
-	<div data-role="header" data-theme="b" data-add-back-btn="true">
+<div data-role="page" id="artist" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+	<div data-role="header" data-theme="a" data-add-back-btn="true">
 		<h1><div id="artistTitle" align="center"></div></h1>
-		<a href="#index" data-rel="back" data-theme="b" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
-		<a href="#index" data-theme="b" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
+		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
+		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
 	<div data-role="content">	
 		<div class="ui-bar ui-bar-c" align="center"> <!--one of jquery's divider bars was used here-->
