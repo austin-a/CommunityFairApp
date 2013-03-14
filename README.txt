@@ -1,7 +1,7 @@
-Arts Walk Mobile App Maintenance Guide
+Community Fair Mobile App Maintenance Guide
 
-This guide is intended to explain how to maintain the Arts Walk mobile app.
-The Arts Walk application is a series of .html files that support viewing on mobile devices. These pages use the jQuery mobile framework to provide the overall look and feel of the application.
+This guide is intended to explain how to maintain the Community Fair mobile app.
+The Community Fair application is a series of .html files that support viewing on mobile devices. These pages use the jQuery mobile framework to provide the overall look and feel of the application.
 Managing the data on ArcGIS Online
 All of the data for the Arts Walk application is stored and managed in the cloud. The data is hosted on the City of Olympia’s ArcGIS Online subscription. There are three pieces of data that are needed for the application. The first of these has the locations of the businesses. It should have the fields: ID, Business, Address, Artist, City, and State. The addresses can then be geocoded in ArcGIS Desktop. The second dataset includes the list of artists that are performing or have art on display. The artist table has the fields: ID, and Artist. The last table contains the events that are occurring during Arts Walk. The event table has the fields: Day, Time, Event, ID, and Sort (the order you wish the events to be listed in). The two tables are then related to the businesses with a relate operation in ArcGIS Desktop before being published to ArcGIS Online as a feature service. Once the data has been published, the related tables will not be editable unless a query (post) operation is used. The businesses can be edited using the editing tools on ArcGIS Online.
 
