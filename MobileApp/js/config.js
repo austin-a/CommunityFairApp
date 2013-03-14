@@ -41,16 +41,16 @@ var userConfig = {
     // GENERAL SETTINGS
     // ------------------------------------------------------------------------------------------------------------------------
     // Set application title
-    ApplicationName: "Olympia Arts Walk",
+    ApplicationName: "Community Fair App",
 
     // Set application icon path
     //ApplicationIcon: "images/EPPIcon.png",
 	
 	// Set application message
-    ApplicationMessage: "Welcome! This app will function as your virtual guide while you visit Arts Walk. You can find businesses, artists, and events using the buttons below.",
+    ApplicationMessage: "Welcome! This app will function as your virtual guide while you visit this event. You can find venues, presenters, and events using the buttons below.",
 	
 	// Set application info
-	ApplicationAbout: "<p>Olympia Arts Walk Mobile Guide</p><p>v1.0.0, September 2012</p><p>Developed by Esri&reg; for the City of Olympia, WA</p>",
+	ApplicationAbout: "<p>Community Fair Mobile Guide</p><p>v1.0.0, September 2012</p><p>Developed by Austin Amort</p>",
 
     // ------------------------------------------------------------------------------------------------------------------------
     // BASEMAP SETTINGS
@@ -77,10 +77,10 @@ var userConfig = {
     DefaultExtent: "-13682050,5948629,-13679940,5950043",
 	SpatialReference: 102100,
 	
-	LocationsLayer: "http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/0",
+	LocationsLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/0",
 	
-	PeopleLayer: "http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/1",
+	PeopleLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/1",
 
-	ActivityLayer: "http://services.arcgis.com/a83cWFJpXhezKJzd/ArcGIS/rest/services/NewBestArtsWalkFall12/FeatureServer/2",
+	ActivityLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/2",
 
 };
