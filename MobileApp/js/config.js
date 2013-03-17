@@ -74,7 +74,7 @@ var userConfig = {
           ],
 
     // Initial map extent. Use comma (,) to separate values and dont delete the last comma
-    DefaultExtent: "-13682050,5948629,-13679940,5950043",
+    DefaultExtent: "-13557377.978100,5199254.386400,-13556927.127200,5199616.337100",
 	SpatialReference: 102100,
 	
 	LocationsLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/0",

@@ -394,17 +394,6 @@
 		//$('#onmap').append('<a href="#mapPage" data-params="ID=' + pass + '" data-role="button" data-theme="b" data-inline="true" class="map">Map</a>').trigger('create');
 	}
 	
-	function toMap(pass) {
-		 $.mobile.changePage('#mapPage', {
-         });
-         console.log(pass);
-         if (!isNaN(map.extent.xmin) && shownOnce == false) {
-                shownOnce = true;
-                resizeMap();
-        }
-         zoomToLocation(pass);
-	}
-	
 	/*function showResultsFriday(results1) {
 		var u = 0;
 		var l = 0;
@@ -722,7 +711,7 @@
 
 		var zoomExtent = userConfig.DefaultExtent.split(",");
         var startExtent = new esri.geometry.Extent(parseFloat(zoomExtent[0]), parseFloat(zoomExtent[1]), parseFloat(zoomExtent[2]), parseFloat(zoomExtent[3]), new esri.SpatialReference({ wkid: userConfig.SpatialReference }));
-
+		console.log(startExtent);
         map = new esri.Map("map", {
           lods: lods,
 		  extent: startExtent
@@ -758,8 +747,8 @@
         map.addLayer(basemap);
         //could add more to this template to display more info from feature 
         var templateJson = {
-          title: "{Business}",
-          description:"{Artist}"
+          title: "{Venues}",
+          description:"{Display}"
 
         }
         template = new esri.dijit.PopupTemplate(templateJson); //only used if a pop-up is desired
@@ -1038,23 +1027,26 @@
             $('#myList').listview('refresh');
 		});*/
         $('#mapPage').live('pageshow',function(e) {
-            console.log(map.extent);
+			console.log('The map page is now live, time to check flag: ' + flag);
             //parameters = $(e.target).jqmData("params");
             if (!isNaN(map.extent.xmin) && shownOnce == false) {
                 shownOnce = true;
-                resizeMap();
+                resizeMap(); //This is good, but not enough
+				
             }
             if(flag == 0) {
                 if(parameters != undefined) {
                     var paramsObj = dojo.queryToObject(parameters);
                     zoomToLocation(paramsObj);
-					console.log("case 1, with params: " + dojo.queryToObject(parameters));
+					console.log("case 1, with params: ");
+					console.log(paramsObj);
                 } else {
                     showLocation();
                 }
             }
             flag = 0;
         });
+		/*###################### Important code here for clicking on graphics #########################*/
         $('.mapPage').live('click',function(e) {
             flag = 1;
             showLocation();
@@ -1062,7 +1054,6 @@
 		$('.mapVenue').live('click',function(e) {
             //params = $('.mapVenue').data("params");
             parameters = $('.mapVenue').jqmData("params");
-			console.log("something FUN!");
             console.log(parameters);
         });
         $('.multiPass').live('click',function(e) {
