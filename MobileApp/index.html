@@ -725,10 +725,12 @@
 
 			map.addLayer(artsWalk);
 
-			//add a graphics  layer to display selected features 
+			//add a graphics  layer to display selected features
 			selectionLayer = new esri.layers.GraphicsLayer();
+			//listen for the graphics layer click event, this code doesn't seem to do anything
             dojo.connect(selectionLayer,'onClick',function(evt){
                 viewVenues(evt.graphic);
+				console.log('Graphics have been clicked');
             });
 			var selR = createRenderer('blue');
 			selectionLayer.setRenderer(selR);
@@ -743,8 +745,6 @@
         console.log("0");
         var basemap1 = new esri.layers.ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
         map.addLayer(basemap1);
-        var basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://nwdemo1.esri.com/arcgis/rest/services/Olympia/Olympia_CM/MapServer");
-        map.addLayer(basemap);
         //could add more to this template to display more info from feature 
         var templateJson = {
           title: "{Venues}",
@@ -754,17 +754,16 @@
         template = new esri.dijit.PopupTemplate(templateJson); //only used if a pop-up is desired
 
         artsWalk = new esri.layers.FeatureLayer(userConfig.LocationsLayer, {
-          "id":'artsWalkLayer',
+          "id":'Locations',
           mode: esri.layers.FeatureLayer.MODE_SNAPSHOT,
           outFields: ["ID","Venues","Display"]
         });
 		console.log("34");
-
         //listen for the locations layer's click event
         dojo.connect(artsWalk,'onClick',function(evt){
+		  console.log('Feature layer has been clicked');
           viewVenues(evt.graphic);
         });
-        //listen for the graphics layer click event 
 
         console.log('35');
         map.infoWindow.resize(200, 250);
@@ -855,12 +854,15 @@
         point.y + toleraceInMapCoords,
         map.spatialReference);
       }
-	  
+
+	  /*###########################This function changes from the map page to the page describing the presenter###################################*/
 	  function viewVenues(graphic){
-          $.mobile.changePage('index.html#venue', {
-            //graphic.attributes.ID
-            
-          });
+		  console.log("the parameter has been passed");
+		  $.mobile.changePage('index.html#venue', {
+			reloadPage: "true"
+			//graphic.attributes.ID
+		  });
+		  console.log("Something has happened!");
         var queryEventsVenue = new esri.tasks.Query();
         queryEventsVenue.returnGeometry = false;
         queryEventsVenue.outFields = ["Time, Day, Event"];
@@ -1046,13 +1048,12 @@
             }
             flag = 0;
         });
-		/*###################### Important code here for clicking on graphics #########################*/
+
         $('.mapPage').live('click',function(e) {
             flag = 1;
             showLocation();
         });
 		$('.mapVenue').live('click',function(e) {
-            //params = $('.mapVenue').data("params");
             parameters = $('.mapVenue').jqmData("params");
             console.log(parameters);
         });
@@ -1281,6 +1282,7 @@
 		}
 		
 		function showArtist(results3) {
+			console.log("Does it make it this far?");
 			$('#artistVenue').empty()
 			var b = "";
 			$('#artistVenue').append("<li data-role='list-divider'>Presenters</li>");
