@@ -77,10 +77,10 @@ var userConfig = {
     DefaultExtent: "-13557377.978100,5199254.386400,-13556927.127200,5199616.337100",
 	SpatialReference: 102100,
 	
-	LocationsLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/0",
+	LocationsLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/SampleLocations/FeatureServer/0",
 	
-	PeopleLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/1",
+	PeopleLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/SampleLocations/FeatureServer/1",
 
-	ActivityLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/2",
+	ActivityLayer: "http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/SampleLocations/FeatureServer/2",
 
 };

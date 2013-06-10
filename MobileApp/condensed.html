@@ -94,7 +94,7 @@
 	dojo.require("esri.arcgis.utils");
 	dojo.require("esri.tasks.query");
     
-	var queryTaskEvents, queryEvents, query2, map, artsWalk, selectionLayer, template, parameters, queryTaskArtists, queryTaskVenues, queryVenues, queryName, queryArtists;
+	var queryTaskEvents, queryEvents, query2, map, artsWalk, selectionLayer, template, parameters, queryTaskPresenters, queryTaskVenues, queryVenues, queryName, queryPresenters;
     var flag = 0;
 	var pass = "";
     var shownOnce = false;
@@ -115,7 +115,7 @@
 	
         $.mobile.showPageLoadingMsg();
         initMap(0);
-		//query businesses
+		//query Venueses
         queryTaskVenues = new esri.tasks.QueryTask(userConfig.LocationsLayer);
         //build query filter
         queryVenues = new esri.tasks.Query();
@@ -125,15 +125,15 @@
 		queryVenues.where = "1=1"; //1 always equals 1, so all of the records will be displayed
 		
 		
-		//query artists
-		queryTaskArtists = new esri.tasks.QueryTask(userConfig.PeopleLayer);
-		//build query filter, artist table
-        queryArtists = new esri.tasks.Query();
-        queryArtists.returnGeometry = false;
-        queryArtists.outFields = ["Presenter, ID"];
-		queryArtists.orderByFields = ["Presenter"];
-		queryArtists.where = "1=1"; //query all of the records
-		//query only artist name
+		//query Presenters
+		queryTaskPresenters = new esri.tasks.QueryTask(userConfig.PeopleLayer);
+		//build query filter, Presenter table
+        queryPresenters = new esri.tasks.Query();
+        queryPresenters.returnGeometry = false;
+        queryPresenters.outFields = ["Presenter, ID"];
+		queryPresenters.orderByFields = ["Presenter"];
+		queryPresenters.where = "1=1"; //query all of the records
+		//query only Presenter name
 		queryName = new esri.tasks.Query();
         queryName.returnGeometry = false;
         queryName.outFields = ["Presenter"];
@@ -154,17 +154,17 @@
 	}
 	
     function executeQueries() {
-        var dVenues, dArtists, dNow, dFriday, dSaturday, dList, dEvents;
+        var dVenues, dPresenters, dNow, dFriday, dSaturday, dList, dEvents;
         dVenues = queryTaskVenues.execute(queryVenues,listVenues);
-        dArtists = queryTaskArtists.execute(queryArtists,listArtists);
+        dPresenters = queryTaskPresenters.execute(queryPresenters,listPresenters);
         dNow = queryTaskEvents.execute(queryEvents,rightNow);
 		dFriday = queryTaskEvents.execute(queryEvents,showResultsFriday);
 		dSaturday = queryTaskEvents.execute(queryEvents,showResultsSaturday);
         dEvents = queryTaskEvents.execute(queryEvents,listEvents);
-		dList = new dojo.DeferredList([dVenues, dArtists, dNow, dFriday, dSaturday, dEvents]);
+		dList = new dojo.DeferredList([dVenues, dPresenters, dNow, dFriday, dSaturday, dEvents]);
         dList.then(function(results){
             $('#schedulebtn').removeClass("ui-disabled").addClass("ui-enabled");
-            $('#artistbtn').removeClass("ui-disabled").addClass("ui-enabled");
+            $('#Presenterbtn').removeClass("ui-disabled").addClass("ui-enabled");
             $('#venuebtn').removeClass("ui-disabled").addClass("ui-enabled");
             $('#nowbtn').removeClass("ui-disabled").addClass("ui-enabled");
             $.mobile.hidePageLoadingMsg();
@@ -394,6 +394,17 @@
 		//$('#onmap').append('<a href="#mapPage" data-params="ID=' + pass + '" data-role="button" data-theme="b" data-inline="true" class="map">Map</a>').trigger('create');
 	}
 	
+	function toMap(pass) {
+		 $.mobile.changePage('#mapPage', {
+         });
+         console.log(pass);
+         if (!isNaN(map.extent.xmin) && shownOnce == false) {
+                shownOnce = true;
+                resizeMap();
+        }
+         zoomToLocation(pass);
+	}
+	
 	/*function showResultsFriday(results1) {
 		var u = 0;
 		var l = 0;
@@ -577,9 +588,6 @@
 		  var featureAttributes = results2.features[i].attributes;
 		  if (results2.features[i].attributes["Day"] == "Saturday") { //only get the events that occur on Saturday
 			l = i - 1; //this is used to reference the previously occuring listing
-			if (l == -1) {
-				l = 0;
-			}
 			if (results2.features[i].attributes["Time"].charAt(0) < 9) { //this filters out NaN values
 				var one = results2.features[i].attributes["Time"].charAt(0); //the first digit of the time (present record)
 				var two = results2.features[i].attributes["Time"].charAt(1); //the second digit of the time (present record)
@@ -675,8 +683,8 @@
       }
 	  
 	  function getName() {
-		var business = esri.urlToObject(dojo.doc.location.href);
-		var b = business.query.event;
+		var Venues = esri.urlToObject(dojo.doc.location.href);
+		var b = Venues.query.event;
 		return b;
 	  }
 	  
@@ -711,7 +719,7 @@
 
 		var zoomExtent = userConfig.DefaultExtent.split(",");
         var startExtent = new esri.geometry.Extent(parseFloat(zoomExtent[0]), parseFloat(zoomExtent[1]), parseFloat(zoomExtent[2]), parseFloat(zoomExtent[3]), new esri.SpatialReference({ wkid: userConfig.SpatialReference }));
-		console.log(startExtent);
+
         map = new esri.Map("map", {
           lods: lods,
 		  extent: startExtent
@@ -725,12 +733,10 @@
 
 			map.addLayer(artsWalk);
 
-			//add a graphics  layer to display selected features
+			//add a graphics  layer to display selected features 
 			selectionLayer = new esri.layers.GraphicsLayer();
-			//listen for the graphics layer click event, this code doesn't seem to do anything
             dojo.connect(selectionLayer,'onClick',function(evt){
                 viewVenues(evt.graphic);
-				console.log('Graphics have been clicked');
             });
 			var selR = createRenderer('blue');
 			selectionLayer.setRenderer(selR);
@@ -739,31 +745,33 @@
             console.log("1");
 			//zoomToLocation(ID);
             $('#mapbtn').removeClass("ui-disabled").addClass("ui-enabled");
-			console.log("1+1");
         });
         //add the world imagery from arcgis online
         console.log("0");
         var basemap1 = new esri.layers.ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer");
         map.addLayer(basemap1);
+        var basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://nwdemo1.esri.com/arcgis/rest/services/Olympia/Olympia_CM/MapServer");
+        map.addLayer(basemap);
         //could add more to this template to display more info from feature 
         var templateJson = {
           title: "{Venues}",
-          description:"{Display}"
+          description:"{Presenter}"
 
         }
         template = new esri.dijit.PopupTemplate(templateJson); //only used if a pop-up is desired
 
-        artsWalk = new esri.layers.FeatureLayer(userConfig.LocationsLayer, {
-          "id":'Locations',
+        artsWalk = new esri.layers.FeatureLayer("http://services1.arcgis.com/FB50u5E6wrw7l3d1/arcgis/rest/services/EventLocations/FeatureServer/0", {
+          "id":'artsWalkLayer',
           mode: esri.layers.FeatureLayer.MODE_SNAPSHOT,
           outFields: ["ID","Venues","Display"]
         });
 		console.log("34");
-        //listen for the locations layer's click event
+
+        //listen for the arts walk layer's click event
         dojo.connect(artsWalk,'onClick',function(evt){
-		  console.log('Feature layer has been clicked');
           viewVenues(evt.graphic);
         });
+        //listen for the graphics layer click event 
 
         console.log('35');
         map.infoWindow.resize(200, 250);
@@ -854,15 +862,12 @@
         point.y + toleraceInMapCoords,
         map.spatialReference);
       }
-
-	  /*###########################This function changes from the map page to the page describing the presenter###################################*/
+	  
 	  function viewVenues(graphic){
-		  console.log("the parameter has been passed");
-		  $.mobile.changePage('index.html#venue', {
-			reloadPage: "true"
-			//graphic.attributes.ID
-		  });
-		  console.log("Something has happened!");
+          $.mobile.changePage('condensed.html#venue', {
+            //graphic.attributes.ID
+            
+          });
         var queryEventsVenue = new esri.tasks.Query();
         queryEventsVenue.returnGeometry = false;
         queryEventsVenue.outFields = ["Time, Day, Event"];
@@ -870,8 +875,8 @@
         queryEventsVenue.where = "ID= " + graphic.attributes.ID;
         queryTaskEvents.execute(queryEventsVenue,showEvents);
         
-        queryArtists.where = "ID= " + graphic.attributes.ID;
-        queryTaskArtists.execute(queryArtists,showArtist);
+        queryPresenters.where = "ID= " + graphic.attributes.ID;
+        queryTaskPresenters.execute(queryPresenters,showPresenter);
         
         var queryVenueName = new esri.tasks.Query();
         queryVenueName.returnGeometry = false;
@@ -934,7 +939,7 @@
 					//map.centerAndZoom(featureSet.features[0].geometry, 1);
                   }else{
                     var extent = esri.graphicsExtent(featureSet.features);
-                    map.setExtent(extent, true);
+                    map.setExtent(extent, true); //This doesn't seem to set the scale properly.
                   }
               });
         }
@@ -943,11 +948,11 @@
       }
 	  
 	  function jQueryReady() {
-		$('.artistVenue').live('click',
+		$('.PresenterVenue').live('click',
 			function(e) {
 				
 				//params = $(e.target).jqmData("params");
-                parameters = $('.artistVenue').data("params")
+                parameters = $('.PresenterVenue').data("params")
 				console.log(parameters);
 				var paramsObj = dojo.queryToObject(parameters);
 				var queryEventsVenue = new esri.tasks.Query();
@@ -957,8 +962,8 @@
 				queryEventsVenue.where = "ID= " + paramsObj["ID"];
 				queryTaskEvents.execute(queryEventsVenue,showEvents);
 				
-				queryArtists.where = "ID= " + paramsObj["ID"];
-				queryTaskArtists.execute(queryArtists,showArtist);
+				queryPresenters.where = "ID= " + paramsObj["ID"];
+				queryTaskPresenters.execute(queryPresenters,showPresenter);
                 
                 var queryVenueName = new esri.tasks.Query();
                 queryVenueName.returnGeometry = false;
@@ -984,8 +989,8 @@
 				queryEventsVenue.where = "ID= " + paramsObj["ID"];
 				queryTaskEvents.execute(queryEventsVenue,showEvents);
 				
-				queryArtists.where = "ID= " + paramsObj["ID"];
-				queryTaskArtists.execute(queryArtists,showArtist);
+				queryPresenters.where = "ID= " + paramsObj["ID"];
+				queryTaskPresenters.execute(queryPresenters,showPresenter);
                 
                 var queryVenueName = new esri.tasks.Query();
                 queryVenueName.returnGeometry = false;
@@ -1012,11 +1017,11 @@
 				//run some javascript based on the params to select features on map and zoom
 			}
 		);*/
-		$('.artist').live('click',
+		$('.Presenter').live('click',
 			function(e) {
 				parameters = $(e.target).jqmData("params");
 				var paramsObj = dojo.queryToObject(parameters);
-				artistName(paramsObj);
+				PresenterName(paramsObj);
 				console.log(paramsObj);
 				//run some javascript based on the params to select features on map and zoom
 			}
@@ -1025,35 +1030,32 @@
 			$('#venueList').listview('refresh');
             console.log('made it');
 		});
-		$('#searchartist').bind('pageshow',function() {
+		$('#searchPresenter').bind('pageshow',function() {
             $('#myList').listview('refresh');
 		});*/
         $('#mapPage').live('pageshow',function(e) {
-			console.log('The map page is now live, time to check flag: ' + flag);
+            console.log(map.extent);
             //parameters = $(e.target).jqmData("params");
             if (!isNaN(map.extent.xmin) && shownOnce == false) {
                 shownOnce = true;
-                resizeMap(); //This is good, but not enough
-				
+                resizeMap();
             }
             if(flag == 0) {
                 if(parameters != undefined) {
                     var paramsObj = dojo.queryToObject(parameters);
                     zoomToLocation(paramsObj);
-					console.log("case 1, with params: ");
-					console.log(paramsObj);
                 } else {
                     showLocation();
                 }
             }
             flag = 0;
         });
-
         $('.mapPage').live('click',function(e) {
             flag = 1;
             showLocation();
         });
 		$('.mapVenue').live('click',function(e) {
+            //params = $('.mapVenue').data("params");
             parameters = $('.mapVenue').jqmData("params");
             console.log(parameters);
         });
@@ -1144,19 +1146,19 @@
 		}
 	  }
       
-	  function listArtists(results1) {
+	  function listPresenters(results1) {
         var s = "";
 		var f = "";
 		var u = 0;
-		$('#myList').append('<li data-role="list-divider" data-theme="b">Presenter</li>');
+		$('#myList').append('<li data-role="list-divider" data-theme="b">Presenters</li>');
 		for (var i=0, il=results1.features.length; i<il; i++) { //iterate through all of the records
 		  var featureAttributes = results1.features[i].attributes;
 		  var count = 0;
 		  for (att in featureAttributes) {
 			count++;
 		  }
-		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the presenter field and the ID field, but we only want one listing for each business
-				$('#myList').append('<li><a href="#artist" data-params="ID=' + featureAttributes["ID"] + '&Presenter=' + featureAttributes["Presenter"] + '" data-transition="slide" class="artist">' + featureAttributes["Presenter"] + '</a></li>');
+		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the Venues field and the ID field, but we only want one listing for each Venues
+				$('#myList').append('<li><a href="#Presenter" data-params="ID=' + featureAttributes["ID"] + '&Presenter=' + featureAttributes["Presenter"] + '" data-transition="slide" class="Presenter">' + featureAttributes["Presenter"] + '</a></li>');
 			  }
 		}
 	  }
@@ -1171,8 +1173,8 @@
 		  for (att in featureAttributes) {
 			count++;
 		  }
-		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the venues field and the ID field, but we only want one listing for each venue
-			$('#venueList').append('<li><a href="#venue" data-params="ID=' + featureAttributes["ID"] + '&Venues=' + featureAttributes["Venues"] + '" data-transition="slide" class="venue">' + featureAttributes["Venues"] + '</a></li>'); //this link passes the business id into the next page
+		  for (var g=0, gl=count/2; g<gl; g++) { //This code was used because the program is looping through the Venues field and the ID field, but we only want one listing for each Venues
+			$('#venueList').append('<li><a href="#venue" data-params="ID=' + featureAttributes["ID"] + '&Venues=' + featureAttributes["Venues"] + '" data-transition="slide" class="venue">' + featureAttributes["Venues"] + '</a></li>'); //this link passes the Venues id into the next page
 		  }
 		}
 	  }
@@ -1183,7 +1185,7 @@
 			$('#onmap').empty();
             console.log(results1.features[0].attributes["Venues"]);
 			$('#title').append(results1.features[0].attributes["Venues"]);
-			/*if (results1.features[0].attributes["Website"] == null) { //condition statement for businesses with no website, add this back in when website data is available
+			/*if (results1.features[0].attributes["Website"] == null) { //condition statement for Venueses with no website, add this back in when website data is available
 				$('#website').append("<div align='center'>Website not available.</div>").trigger('create'); //calling .trigger('create'); generates the jquery styling for dynamic anchor tags and div tags
 			} else {
 				var site = results1.features[0].attributes["Website"];
@@ -1265,33 +1267,32 @@
 		}
 		
 		
-		function artistName(results2) {
-			$('#artistTitle').empty();
-			//var a = esri.urlToObject(dojo.doc.location.href).query.Artist; //the name of the Presenter is passed in through the URL because the artists do not have a unique ID of their own, they only have the ID of the venue they are performing at.
-			dojo.byId("artistTitle").innerHTML = results2.Presenter;
+		function PresenterName(results2) {
+			$('#PresenterTitle').empty();
+			//var a = esri.urlToObject(dojo.doc.location.href).query.Presenter; //the name of the Presenter is passed in through the URL because the Presenters do not have a unique ID of their own, they only have the ID of the Venues they are performing at.
+			dojo.byId("PresenterTitle").innerHTML = results2.Presenter;
 			queryVenues.where = "ID= " + results2["ID"];
 			queryTaskVenues.execute(queryVenues,showVenue);
 		}
 		
 		function showVenue(results1) {
 			console.log(results1);
-			$('#artistLocation').empty();
-			$('#artistMap').empty();
-			$('#artistLocation').append("<a href='#venue' data-params='ID=" + results1.features[0].attributes["ID"] + "&Venues=" + results1.features[0].attributes["Venues"] + "' data-role='button' data-theme='b' data-transition='fade' class='artistVenue'>" + results1.features[0].attributes["Venues"] + "</a>").trigger('create'); //this code passes the venue name as well as the ID
-			$('#artistMap').append('<a href="#mapPage" data-params="ID=' + results1.features[0].attributes["ID"] + '" data-role="button" data-theme="b" data-transition="pop" class="mapVenue">Map</a>').trigger('create');
+			$('#PresenterLocation').empty();
+			$('#PresenterMap').empty();
+			$('#PresenterLocation').append("<a href='#venue' data-params='ID=" + results1.features[0].attributes["ID"] + "&Venues=" + results1.features[0].attributes["Venues"] + "' data-role='button' data-theme='b' data-transition='fade' class='PresenterVenue'>" + results1.features[0].attributes["Venues"] + "</a>").trigger('create'); //this code passes the Venues name as well as the ID
+			$('#PresenterMap').append('<a href="#mapPage" data-params="ID=' + results1.features[0].attributes["ID"] + '" data-role="button" data-theme="b" data-transition="pop" class="mapVenue">Map</a>').trigger('create');
 		}
 		
-		function showArtist(results3) {
-			console.log("Does it make it this far?");
-			$('#artistVenue').empty()
+		function showPresenter(results3) {
+			$('#PresenterVenue').empty()
 			var b = "";
-			$('#artistVenue').append("<li data-role='list-divider'>Presenters</li>");
+			$('#PresenterVenue').append("<li data-role='list-divider'>Presenting Presenters</li>");
 			for (var i = 0, il = results3.features.length; i < il; i++) { //iterate through all of the events
 				var featureAttributes = results3.features[i].attributes;
-				$('#artistVenue').append("<li><a href='#artist' data-params='ID=" + featureAttributes["ID"] + "&Presenter=" + featureAttributes["Presenter"] + "' data-role='button' data-transition='slide' class='artist'>" + featureAttributes["Presenter"] + "</a></li>");
+				$('#PresenterVenue').append("<li><a href='#Presenter' data-params='ID=" + featureAttributes["ID"] + "&Presenter=" + featureAttributes["Presenter"] + "' data-role='button' data-transition='slide' class='Presenter'>" + featureAttributes["Presenter"] + "</a></li>");
 			}
-			$('#artistVenue').listview();
-			$('#artistVenue').listview('refresh');
+			$('#PresenterVenue').listview();
+			$('#PresenterVenue').listview('refresh');
 		}
 		dojo.addOnLoad(init);
 		$(document).bind('pageinit', jQueryReady());
@@ -1311,7 +1312,7 @@
         <a href="#mapPage" id="mapbtn" data-role="button" data-icon="star" data-theme="a" data-transition="pop" class="mapPage ui-disabled">Find on map</a>
 		<a href="#friday" id="schedulebtn" data-role="button" data-icon="info" data-theme="a" data-transition="slide" class="ui-disabled">Event schedule</a>
         <a href="#searchvenue" id="venuebtn" data-role="button" data-icon="search" data-theme="a" data-transition="slide" class="ui-disabled">Search by venue</a>
-		<a href="#searchartist" id="artistbtn" data-role="button" data-icon="search" data-theme="a" data-transition="slide" class="ui-disabled">Search artists and events</a>
+		<a href="#searchPresenter" id="Presenterbtn" data-role="button" data-icon="search" data-theme="a" data-transition="slide" class="ui-disabled">Search presenters and events</a>
 	</div>
 	<div data-role="footer" class="footer-docs" data-theme="a">
 		<div class="right"><a href="#about" data-role="button" data-mini="true" data-inline="true" data-rel="dialog" data-ajax="true" data-transition="pop" data-theme="a">About</a></div>
@@ -1389,15 +1390,15 @@
 	</div>
 </div>
 
-<div data-role="page" id="searchartist" class="type-interior" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+<div data-role="page" id="searchPresenter" class="type-interior" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
 	<div data-role="header" data-theme="a">
-		<h1>Search Artists/Events</h1>
+		<h1>Search Presenters/Events</h1>
 		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
 		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
 	<div data-role="content">
 		<div class="content-primary">
-			<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search artists..." data-filter-theme="a"data-theme="a" data-divider-theme="b"></ul> <!--the list items are programatically added to this tag-->
+			<ul data-role="listview" id="myList" data-filter="true" data-filter-placeholder="Search Presenters..." data-filter-theme="a"data-theme="a" data-divider-theme="b"></ul> <!--the list items are programatically added to this tag-->
 		</div>
 	</div>
 </div>
@@ -1427,7 +1428,7 @@
 		<div id="onmap"></div>
 		<!--<div id="website"></div>-->
 		<br />
-		<ul data-role="listview" id="artistVenue" data-divider-theme="a"></ul>
+		<ul data-role="listview" id="PresenterVenue" data-divider-theme="a"></ul>
 		<br />
 		<ul data-role="listview" id="fridayVenue" data-divider-theme="a"></ul>
 		<br />
@@ -1435,9 +1436,9 @@
 	</div>
 </div>
 
-<div data-role="page" id="artist" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
+<div data-role="page" id="Presenter" data-theme="a"> <!--the 'data-' attributes are additional functionality added by jquery mobile-->
 	<div data-role="header" data-theme="a" data-add-back-btn="true">
-		<h1><div id="artistTitle" align="center"></div></h1>
+		<h1><div id="PresenterTitle" align="center"></div></h1>
 		<a href="#index" data-rel="back" data-theme="a" data-icon="back" data-transition="slide" data-type="button" data-inline="true">Back</a>
 		<a href="#index" data-theme="a" data-icon="home" data-transition="slide" data-direction="reverse" data-type="button" data-inline="true" data-iconpos='notext'></a>
 	</div>
@@ -1445,8 +1446,8 @@
 		<div class="ui-bar ui-bar-c" align="center"> <!--one of jquery's divider bars was used here-->
 			<h3>Presenting at:</h3>
 		</div>
-		<div id="artistLocation"></div>
-		<div id="artistMap"></div>
+		<div id="PresenterLocation"></div>
+		<div id="PresenterMap"></div>
 	</div>
 </div>
 
